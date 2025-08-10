@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Кот-отельер — 3D idle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Шрифт -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div class="hud">
+    <div class="stats">
+      <span>Монеты: <b id="money">0</b></span>
+      <span>Репутация: <b id="reputation">0</b></span>
+      <span>Гостей в отеле: <b id="guests">0</b>/<b id="capacity">0</b></span>
+      <span>Этажи: <b id="floors">1</b></span>
+      <span>Мебель ур.: <b id="furnLevel">1</b></span>
+      <span>День <b id="day">1</b></span>
+    </div>
+    <div class="buttons">
+      <button id="btnAddFloor">Открыть этаж</button>
+      <button id="btnAddRoom">Построить номер</button>
+      <button id="btnUpgradeFurn">Улучшить мебель</button>
+      <button id="btnHireStaff">Нанять персонал</button>
+      <button id="btnMarketing">Маркетинг</button>
+      <button id="btnSave">Сохранить</button>
+      <button id="btnReset">Сброс</button>
+    </div>
+  </div>
+
+  <!-- Диалоги -->
+  <div id="dialog" class="dialog hidden">
+    <div class="dialog-content">
+      <div class="dialog-text" id="dialogText"></div>
+      <div class="dialog-actions" id="dialogActions"></div>
+    </div>
+  </div>
+
+  <!-- Панель апгрейдов -->
+  <div class="panel" id="panel">
+    <h3>Улучшения</h3>
+    <div id="upgrades"></div>
+  </div>
+
+  <!-- Подсказки -->
+  <div id="toast" class="toast"></div>
+
+  <script type="module">
+    import './js/models.js';
+    import './js/utils.js';
+    import './js/gameplay.js';
+    import './js/main.js';
+  </script>
+</body>
+</html>
