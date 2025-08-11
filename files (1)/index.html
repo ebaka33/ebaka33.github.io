@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bottle Flip 3D Realistic</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-ui">
+    <canvas id="game-canvas"></canvas>
+    <div id="hud">
+      <div id="score-panel">
+        <span id="coins">Монеты: 0</span>
+        <span id="location-name">Локация: Двор</span>
+      </div>
+      <div id="slider-panel">
+        <span>Шанс успеха:</span>
+        <input type="range" id="chance-slider" min="0" max="100" value="50" disabled />
+        <div id="chance-color"></div>
+      </div>
+      <div id="shop-btn">Магазин</div>
+      <div id="music-btn">Музыка</div>
+    </div>
+    <div id="shop-modal" class="modal hidden"></div>
+    <div id="music-modal" class="modal hidden"></div>
+    <div id="result-modal" class="modal hidden"></div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
