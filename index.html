@@ -1,0 +1,2216 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <title>Кото-Отель — Idle 2.5D (Часть 1/6)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <style>
+    :root {
+      --ui-bg: rgba(20, 22, 27, 0.75);
+      --ui-fg: #e8f0ff;
+      --ui-accent: #78d7ff;
+      --ui-accent-2: #ffd37a;
+      --ui-muted: #94a3b8;
+      --ui-border: rgba(255,255,255,0.12);
+      --shadow: 0 8px 24px rgba(0,0,0,0.35);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+    }
+    @font-face {
+      font-family: "Nunito";
+      src: local("Nunito"), local("Nunito-Regular");
+      font-display: swap;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(1200px 800px at 70% 20%, #0f172a, #0b1222 55%, #060a14);
+      color: var(--ui-fg);
+      font-family: var(--font);
+      letter-spacing: 0.2px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      user-select: none;
+      touch-action: none;
+    }
+    #root {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+    canvas#game {
+      display: block;
+      image-rendering: optimizeQuality;
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      background: #0b0f1a;
+    }
+    /* Верхняя панель UI */
+    .hud {
+      position: fixed;
+      top: env(safe-area-inset-top, 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      padding: 10px 14px;
+      border-radius: 14px;
+      backdrop-filter: blur(10px) saturate(1.2);
+      box-shadow: var(--shadow);
+      pointer-events: auto;
+      z-index: 5;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ui-fg);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--ui-border);
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .chip b { color: white; font-weight: 700; }
+    .btn {
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.2));
+      border: 1px solid var(--ui-border);
+      color: white;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: transform 0.06s ease, background 0.2s ease;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn.active {
+      background: linear-gradient(180deg, rgba(120,215,255,0.25), rgba(0,0,0,0.3));
+      border-color: rgba(120,215,255,0.6);
+      color: #dff6ff;
+      box-shadow: inset 0 0 0 1px rgba(120,215,255,0.35);
+    }
+    .row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sep {
+      width: 1px;
+      height: 28px;
+      background: var(--ui-border);
+      margin: 0 2px;
+    }
+    .slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 140px;
+      height: 10px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--ui-border);
+      border-radius: 999px;
+      outline: none;
+      overflow: hidden;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--ui-accent);
+      box-shadow: 0 0 0 4px rgba(120,215,255,0.25);
+      cursor: pointer;
+      border: none;
+    }
+    .slider::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--ui-accent);
+      box-shadow: 0 0 0 4px rgba(120,215,255,0.25);
+      cursor: pointer; border: none;
+    }
+    .tooltip {
+      position: fixed;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--ui-bg);
+      border: 1px solid var(--ui-border);
+      color: var(--ui-fg);
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      opacity: 0.9;
+      box-shadow: var(--shadow);
+      z-index: 5;
+    }
+    .brand {
+      position: fixed;
+      left: env(safe-area-inset-left, 12px);
+      bottom: env(safe-area-inset-bottom, 12px);
+      background: rgba(255,255,255,0.04);
+      color: var(--ui-muted);
+      border: 1px solid var(--ui-border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      box-shadow: var(--shadow);
+      z-index: 4;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <canvas id="game" width="1920" height="1080"></canvas>
+  </div>
+
+  <!-- Верхняя HUD: время, скорость, громкость музыки -->
+  <div class="hud" id="hud">
+    <div class="chip" id="timeChip">Время: <b>06:00</b></div>
+    <div class="chip" id="dayChip">День: <b>1</b></div>
+    <div class="sep"></div>
+    <div class="row">
+      <button class="btn" id="speed1">x1</button>
+      <button class="btn" id="speed2">x2</button>
+      <button class="btn" id="speed4">x4</button>
+      <button class="btn" id="pause">Пауза</button>
+    </div>
+    <div class="sep"></div>
+    <div class="row">
+      <span class="chip">Музыка</span>
+      <input class="slider" id="musicVolume" type="range" min="0" max="1" step="0.01" value="0.45" />
+      <button class="btn" id="mute">🔇</button>
+    </div>
+  </div>
+
+  <div class="brand">Кото‑Отель · idle 2.5D · Часть 1/6</div>
+  <div class="tooltip">Подсказка: клик по полотну переключает «полную фокусировку» для управления</div>
+
+<script type="module">
+/* =========================================================================
+   Кото-Отель — Idle 2.5D
+   Часть 1/6: Движок, 16:9, сцены, живой фон, день/ночь, музыка
+   Автор: ты и твой дядя‑кот (и чуточку — я)
+   ========================================================================= */
+
+/* ---------------------------
+   Утилиты
+---------------------------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const invLerp = (a, b, v) => (v - a) / (b - a);
+const remap = (inA, inB, outA, outB, v) => lerp(outA, outB, clamp(invLerp(inA, inB, v), 0, 1));
+const TAU = Math.PI * 2;
+const rand = (a=0, b=1) => a + Math.random()*(b-a);
+const randi = (a, b) => Math.floor(rand(a, b+1));
+const chance = p => Math.random() < p;
+const easeInOut = t => 0.5 - 0.5 * Math.cos(Math.PI * clamp(t,0,1));
+const nowMs = () => performance.now();
+
+/* ---------------------------
+   Конфиг экрана и камеры
+---------------------------- */
+const VIRTUAL_W = 1920;
+const VIRTUAL_H = 1080;
+
+/* ---------------------------
+   Класс Game: цикл, сцены
+---------------------------- */
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d', { alpha: false, desynchronized: true, antialias: true });
+    this.off = document.createElement('canvas');
+    this.off.width = VIRTUAL_W;
+    this.off.height = VIRTUAL_H;
+    this.octx = this.off.getContext('2d', { alpha: false });
+
+    this.last = nowMs();
+    this.accum = 0;
+    this.dt = 1/60;
+    this.paused = false;
+    this.speed = 1; // 1,2,4
+
+    this.scene = null;
+    this.scenes = new Map();
+
+    this.input = new Input(this.canvas);
+    this.audio = new AudioManager();
+
+    this.time = new WorldTime(); // день/ночь
+
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.audio.suspend();
+      else this.audio.resume();
+    });
+    this.canvas.addEventListener('click', () => {
+      // На первый клик активируем аудиоконтекст (политика браузеров)
+      this.audio.unlock();
+    });
+
+    this.registerScene('loading', () => new LoadingScene(this));
+    this.registerScene('hotel-shell', () => new HotelShellScene(this));
+
+    this.setScene('loading');
+    this.startLoop();
+  }
+
+  registerScene(name, factory) { this.scenes.set(name, factory); }
+  setScene(name, data=null) {
+    if (!this.scenes.has(name)) throw new Error('Unknown scene '+name);
+    if (this.scene?.onLeave) this.scene.onLeave();
+    this.scene = this.scenes.get(name)();
+    if (this.scene?.onEnter) this.scene.onEnter(data);
+  }
+
+  resize() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const scale = Math.min(w / VIRTUAL_W, h / VIRTUAL_H);
+    const cw = Math.floor(VIRTUAL_W * scale);
+    const ch = Math.floor(VIRTUAL_H * scale);
+    this.canvas.width = cw;
+    this.canvas.height = ch;
+    this.viewScale = scale;
+    this.viewX = Math.floor((w - cw) / 2);
+    this.viewY = Math.floor((h - ch) / 2);
+    this.canvas.style.width = cw + 'px';
+    this.canvas.style.height = ch + 'px';
+    this.canvas.style.left = this.viewX + 'px';
+    this.canvas.style.top = this.viewY + 'px';
+    this.canvas.style.position = 'fixed';
+  }
+
+  startLoop() {
+    const tick = () => {
+      const t = nowMs();
+      let frame = (t - this.last) / 1000;
+      this.last = t;
+      frame = Math.min(frame, 0.06); // защитный кламп
+
+      // варьируем скорость
+      if (!this.paused) this.accum += frame * this.speed;
+
+      // фиксированная частота симуляции
+      const step = this.dt;
+      while (this.accum >= step) {
+        this.update(step);
+        this.accum -= step;
+      }
+      this.render();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  update(dt) {
+    // обновляем время мира в любом случае, даже если сцена простая
+    this.time.update(dt, this.speed, !this.paused);
+    // обновляем сцену
+    this.scene?.update?.(dt);
+    // обновляем аудио (музыка следует за временем суток)
+    this.audio.update(this.time);
+  }
+
+  render() {
+    // рендерим на виртуальный холст
+    const g = this.octx;
+    g.save();
+    g.clearRect(0,0,VIRTUAL_W,VIRTUAL_H);
+    // фон сцены
+    this.scene?.render?.(g);
+    // пост-эффекты (виньетка)
+    this.renderVignette(g);
+    g.restore();
+
+    // скейлим на экран
+    const c = this.ctx;
+    c.save();
+    c.clearRect(0,0,this.canvas.width,this.canvas.height);
+    c.imageSmoothingEnabled = true;
+    c.drawImage(this.off, 0,0,VIRTUAL_W,VIRTUAL_H, 0,0,this.canvas.width,this.canvas.height);
+    c.restore();
+  }
+
+  renderVignette(g) {
+    const grd = g.createRadialGradient(VIRTUAL_W*0.5, VIRTUAL_H*0.55, VIRTUAL_W*0.2, VIRTUAL_W*0.5, VIRTUAL_H*0.55, VIRTUAL_W*0.7);
+    grd.addColorStop(0, 'rgba(0,0,0,0)');
+    grd.addColorStop(1, 'rgba(0,0,0,0.22)');
+    g.fillStyle = grd;
+    g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+  }
+}
+
+/* ---------------------------
+   Ввод
+---------------------------- */
+class Input {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.x = 0; this.y = 0;
+    this.worldX = 0; this.worldY = 0;
+    this.down = false;
+    this.justDown = false;
+    this.justUp = false;
+
+    const updatePos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const px = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const py = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+      const sx = VIRTUAL_W / canvas.width;
+      const sy = VIRTUAL_H / canvas.height;
+      this.x = px; this y = py;
+      this.worldX = px * sx;
+      this.worldY = py * sy;
+    };
+
+    canvas.addEventListener('mousemove', updatePos);
+    canvas.addEventListener('touchmove', updatePos, { passive: true });
+    canvas.addEventListener('mousedown', (e) => { this.down = true; this.justDown = true; updatePos(e); });
+    canvas.addEventListener('mouseup',   (e) => { this.down = false; this.justUp = true; updatePos(e); });
+    canvas.addEventListener('mouseleave',() => { this.down = false; });
+    canvas.addEventListener('touchstart',(e)=> { this.down = true; this.justDown = true; updatePos(e); });
+    canvas.addEventListener('touchend',  (e)=> { this.down = false; this.justUp = true; updatePos(e); });
+
+    // сброс edge-флагов
+    setInterval(() => { this.justDown = false; this.justUp = false; }, 0);
+  }
+}
+
+/* ---------------------------
+   Время мира: день/ночь
+---------------------------- */
+class WorldTime {
+  constructor() {
+    this.dayLengthSec = 10 * 60; // длительность дня, сек (10 минут)
+    this.timeSec = this.hmsToSec(6,0,0); // стартуем с 06:00
+    this.dayCount = 1;
+    this._acc = 0;
+  }
+  hmsToSec(h,m,s) { return h*3600 + m*60 + s; }
+  secToHMS(sec) {
+    const s = Math.floor(sec%60);
+    const m = Math.floor((sec/60)%60);
+    const h = Math.floor((sec/3600)%24);
+    return {h,m,s};
+  }
+  fmt2(n){ return String(n).padStart(2,'0'); }
+  get timeOfDay() { // 0..1
+    const {h,m,s} = this.secToHMS(this.timeSec);
+    const daySec = h*3600 + m*60 + s;
+    return daySec / 86400;
+  }
+  update(dt, speed, running) {
+    const dtWorld = running ? dt * speed : 0;
+    // Маппим скорость игры к течению суток: x1 = реалистичный темп, x2/x4 быстрее
+    const scale = 86400 / this.dayLengthSec; // сколько «игровых секунд суток» за 1 реальную секунду
+    const add = dtWorld * scale;
+    this.timeSec += add;
+    while (this.timeSec >= 86400) { this.timeSec -= 86400; this.dayCount += 1; }
+  }
+  get display() {
+    const {h,m} = this.secToHMS(this.timeSec);
+    return `${this.fmt2(h)}:${this.fmt2(m)}`;
+  }
+}
+
+/* ---------------------------
+   Простая система сцен
+---------------------------- */
+class BaseScene {
+  constructor(game){ this.game = game; }
+  onEnter() {}
+  onLeave() {}
+  update(dt) {}
+  render(g) {}
+}
+
+class LoadingScene extends BaseScene {
+  constructor(game) {
+    super(game);
+    this.t = 0;
+    this.minHold = 0.6;
+  }
+  onEnter() {
+    // «Прогружаем» музыку (на самом деле инициализируем синтез)
+    this.game.audio.prepareMusic();
+  }
+  update(dt) {
+    this.t += dt;
+    if (this.t > this.minHold) {
+      this.game.setScene('hotel-shell');
+    }
+  }
+  render(g) {
+    g.fillStyle = '#0b0f1a';
+    g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+    g.fillStyle = '#9cc8ff';
+    g.font = '700 48px Nunito, system-ui';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('Кото‑Отель загружается…', VIRTUAL_W/2, VIRTUAL_H/2 - 20);
+    g.font = '400 20px Nunito, system-ui';
+    g.fillStyle = 'rgba(255,255,255,0.65)';
+    g.fillText('Дядя‑кот оставил тебе ключи и чайник. Остальное — разберёмся по ходу.', VIRTUAL_W/2, VIRTUAL_H/2 + 24);
+  }
+}
+
+/* ---------------------------
+   Живой фон: небо, солнце/луна, облака, птицы, деревья, звёзды
+---------------------------- */
+class LiveBackground {
+  constructor(seed=42) {
+    this.clouds = [];
+    this.birds = [];
+    this.trees = [];
+    this.stars = [];
+    this.noiseT = 0;
+    this.wind = 0.6;
+
+    this.populate();
+  }
+
+  populate() {
+    // облака
+    for (let i=0;i<28;i++) this.clouds.push(this.makeCloud(rand(0,VIRTUAL_W), rand(60, 520), rand(0.2, 1.0)));
+    // птицы
+    for (let i=0;i<5;i++) this.birds.push(this.makeBird(rand(0,VIRTUAL_W), rand(80, 420)));
+    // деревья на переднем плане
+    const rows = 2;
+    for (let r=0;r<rows;r++) {
+      const y = VIRTUAL_H - 120 + r*30;
+      for (let i=0;i<10;i++) {
+        const x = (i/10)*VIRTUAL_W + rand(-40,40);
+        this.trees.push(this.makeTree(x, y + rand(-6,6), r));
+      }
+    }
+    // звёзды
+    for (let i=0;i<180;i++) {
+      this.stars.push({
+        x: rand(0,VIRTUAL_W),
+        y: rand(0, VIRTUAL_H*0.6),
+        s: rand(0.5,1.5),
+        a: rand(0.3,1),
+        tw: rand(0.5, 2),
+        p: rand(0, TAU),
+      });
+    }
+  }
+
+  makeCloud(x,y,s) {
+    return { x,y, s, vx: lerp(8, 24, s), puff: randi(3,6), seed: rand(0,1000), a: rand(0.35,0.75) };
+  }
+  makeBird(x,y) {
+    return { x,y, vx: rand(40, 90), flap: rand(3,6), phase: rand(0,TAU), scale: rand(0.7,1.2) };
+  }
+  makeTree(x,y,row) {
+    return { x,y, sway: rand(0,TAU), row, h: rand(60, 120), hue: rand(100, 150) };
+  }
+
+  update(dt, tod /*0..1*/) {
+    const wind = this.wind * lerp(0.6, 1.35, Math.sin(tod*TAU)*0.5+0.5);
+    for (const c of this.clouds) {
+      c.x += (c.vx * 0.15 + wind*10*c.s) * dt;
+      if (c.x > VIRTUAL_W + 200) { c.x = -200; c.y = rand(60, 520); c.s = rand(0.2, 1.0); }
+      c.a = 0.35 + 0.15*Math.sin((c.seed + performance.now()*0.0002));
+    }
+    for (const b of this.birds) {
+      b.phase += dt * b.flap;
+      b.x += (b.vx + wind*50) * dt;
+      b.y += Math.sin(b.phase*0.9) * 10 * dt * b.flap;
+      if (b.x > VIRTUAL_W + 40) { b.x = -40; b.y = rand(80, 420); }
+    }
+    for (const t of this.trees) {
+      t.sway += dt * (0.5 + 0.5*Math.sin(t.x*0.001 + performance.now()*0.0002));
+    }
+    for (const s of this.stars) {
+      s.p += dt * s.tw;
+    }
+  }
+
+  render(g, tod) {
+    this.renderSky(g, tod);
+    this.renderSunMoon(g, tod);
+    this.renderStars(g, tod);
+    this.renderClouds(g, tod);
+    this.renderBirds(g, tod);
+    this.renderHorizon(g, tod);
+    this.renderTrees(g, tod);
+  }
+
+  renderSky(g, tod) {
+    // Цвет неба зависит от времени
+    // утро: 0.2, день: 0.5, вечер: 0.8, ночь: 0/1
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU)); // 1 днём, 0 ночью
+    const morning = Math.max(0, Math.cos((tod - 0.25)*TAU));
+    const evening = Math.max(0, Math.cos((tod - 0.75)*TAU));
+    const nightness = 1 - dayness;
+
+    const top = mixColor('#0b1530', '#77b6ff', dayness*0.85);
+    const bot = mixColor('#060a14', '#cbe6ff', dayness*0.8);
+    // теплые тона на рассвете/закате
+    const warmAdd = lerp(0, 0.25, Math.max(morning, evening));
+    const topWarm = tint(top, '#ffb36b', warmAdd*0.5);
+    const botWarm = tint(bot, '#ffd8a1', warmAdd*0.6);
+
+    const grd = g.createLinearGradient(0,0,0,VIRTUAL_H);
+    grd.addColorStop(0, topWarm);
+    grd.addColorStop(1, botWarm);
+    g.fillStyle = grd;
+    g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+
+    // лёгкий туман у горизонта
+    const fog = g.createLinearGradient(0, VIRTUAL_H*0.6, 0, VIRTUAL_H);
+    fog.addColorStop(0, 'rgba(255,255,255,0)');
+    fog.addColorStop(1, `rgba(200,230,255,${0.07 + 0.08*dayness})`);
+    g.fillStyle = fog;
+    g.fillRect(0, VIRTUAL_H*0.5, VIRTUAL_W, VIRTUAL_H*0.5);
+
+    // ночная тинтовка
+    if (nightness > 0.01) {
+      g.fillStyle = `rgba(10,16,35,${0.35*nightness})`;
+      g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+    }
+  }
+
+  renderSunMoon(g, tod) {
+    // Положение по дуге
+    const angle = lerp(-Math.PI*0.9, Math.PI*0.1, tod);
+    const cx = VIRTUAL_W * 0.5 + Math.cos(angle) * (VIRTUAL_W*0.42);
+    const cy = VIRTUAL_H * 0.8 - Math.sin(angle) * (VIRTUAL_H*0.75);
+
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    const nightness = 1 - dayness;
+
+    if (dayness > 0.01) {
+      // Солнце
+      const r = lerp(38, 62, dayness);
+      const grad = g.createRadialGradient(cx,cy,0, cx,cy,r*2.2);
+      grad.addColorStop(0, 'rgba(255,255,200,1)');
+      grad.addColorStop(0.4, 'rgba(255,220,120,0.7)');
+      grad.addColorStop(1, 'rgba(255,180,60,0)');
+      g.fillStyle = grad;
+      g.beginPath(); g.arc(cx,cy,r*2.2,0,TAU); g.fill();
+
+      g.fillStyle = 'rgba(255,255,200,0.95)';
+      g.beginPath(); g.arc(cx,cy,r,0,TAU); g.fill();
+    }
+
+    if (nightness > 0.01) {
+      // Луна
+      const r = 26;
+      const grad = g.createRadialGradient(cx,cy,0, cx,cy,r*2.5);
+      grad.addColorStop(0, 'rgba(180,190,255,0.9)');
+      grad.addColorStop(1, 'rgba(130,150,255,0)');
+      g.fillStyle = grad;
+      g.beginPath(); g.arc(cx,cy,r*2.5,0,TAU); g.fill();
+
+      g.fillStyle = '#dfe6ff';
+      g.beginPath(); g.arc(cx,cy,r,0,TAU); g.fill();
+
+      // кратеры
+      g.fillStyle = 'rgba(120,140,200,0.3)';
+      for (let i=0;i<6;i++){
+        const a = rand(0, TAU); const rr = rand(3,5);
+        g.beginPath(); g.arc(cx + Math.cos(a)*rand(6,14), cy + Math.sin(a)*rand(6,14), rr, 0, TAU); g.fill();
+      }
+    }
+  }
+
+  renderStars(g, tod) {
+    const nightness = 1 - Math.max(0, Math.cos((tod - 0.5)*TAU));
+    if (nightness < 0.05) return;
+    g.save();
+    for (const s of this.stars) {
+      const tw = 0.6 + 0.4*Math.sin(s.p);
+      g.globalAlpha = s.a * tw * (0.2 + 0.8*nightness);
+      g.fillStyle = '#eaf2ff';
+      g.beginPath(); g.arc(s.x, s.y, s.s, 0, TAU); g.fill();
+    }
+    g.restore();
+  }
+
+  renderClouds(g, tod) {
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    g.save();
+    for (const c of this.clouds) {
+      g.globalAlpha = c.a * (0.65*dayness + 0.35);
+      drawCloud(g, c.x, c.y, c.s, c.puff);
+    }
+    g.restore();
+  }
+
+  renderBirds(g, tod) {
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    if (dayness < 0.15) return; // ночами птицы отдыхают
+    g.save();
+    for (const b of this.birds) {
+      const flap = Math.sin(b.phase)*6*b.scale;
+      g.translate(b.x, b.y);
+      g.scale(b.scale, b.scale);
+      g.fillStyle = '#1c243b';
+      // крылья
+      g.beginPath();
+      g.moveTo(0,0);
+      g.quadraticCurveTo(-8, -6-flap, -28, -2-flap*0.5);
+      g.quadraticCurveTo(-8, -6-flap, 0,0);
+      g.fill();
+      g.beginPath();
+      g.moveTo(0,0);
+      g.quadraticCurveTo(8, -6-flap, 28, -2-flap*0.5);
+      g.quadraticCurveTo(8, -6-flap, 0,0);
+      g.fill();
+      // туловище
+      g.beginPath(); g.ellipse(0,0,6,4,0,0,TAU); g.fill();
+      // клюв
+      g.fillStyle = '#f3b86b';
+      g.beginPath(); g.moveTo(6,0); g.lineTo(10,1.5); g.lineTo(6,3); g.closePath(); g.fill();
+      g.setTransform(1,0,0,1,0,0);
+    }
+    g.restore();
+  }
+
+  renderHorizon(g, tod) {
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    // дальний город/горы силуэтами
+    g.save();
+    const y = VIRTUAL_H*0.72;
+    g.fillStyle = `rgba(30,40,65,${0.6*dayness + 0.8*(1-dayness)})`;
+    g.beginPath();
+    g.moveTo(0,y+40);
+    // гористый/городской силуэт
+    for (let x=0; x<=VIRTUAL_W; x+=60) {
+      const h = 20 + 40*Math.sin(x*0.002) + 30*Math.sin(x*0.0007);
+      g.lineTo(x, y - h);
+      g.lineTo(x+30, y - h + rand(-12,12));
+    }
+    g.lineTo(VIRTUAL_W, y+40);
+    g.closePath(); g.fill();
+
+    // лёгкая полоска света у горизонта
+    const line = g.createLinearGradient(0,y-40,0,y+60);
+    line.addColorStop(0, 'rgba(255,220,160,0.0)');
+    line.addColorStop(0.5, `rgba(255,220,160,${0.06 + 0.12*Math.max(0,Math.sin((tod*2%1)*Math.PI))})`);
+    line.addColorStop(1, 'rgba(255,220,160,0.0)');
+    g.fillStyle = line;
+    g.fillRect(0, y-40, VIRTUAL_W, 100);
+    g.restore();
+  }
+
+  renderTrees(g, tod) {
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    for (const t of this.trees) {
+      const sway = Math.sin(t.sway)* (t.row===0 ? 2.0 : 1.2);
+      const baseX = t.x, baseY = t.y;
+      const h = t.h;
+      const h1 = h*0.6, h2 = h*0.4;
+
+      g.save();
+      // тени от деревьев
+      g.globalAlpha = 0.2;
+      g.fillStyle = '#000';
+      g.beginPath();
+      g.ellipse(baseX + 10, baseY + 24, 40, 12, 0, 0, TAU);
+      g.fill();
+      g.globalAlpha = 1;
+
+      // ствол
+      g.strokeStyle = '#5b3b2b';
+      g.lineWidth = 6;
+      g.beginPath();
+      g.moveTo(baseX, baseY);
+      g.quadraticCurveTo(baseX + sway, baseY - h1*0.6, baseX + sway*1.2, baseY - h1);
+      g.stroke();
+
+      // крона
+      const hue = t.hue;
+      const leaf1 = hsla(hue, 40, lerp(28, 40, dayness), 0.95);
+      const leaf2 = hsla(hue, 45, lerp(22, 34, dayness), 0.95);
+      drawPuffyBlob(g, baseX + sway*1.0, baseY - h1 - 10, 20, 3, leaf2);
+      drawPuffyBlob(g, baseX + sway*1.3, baseY - h1 - 28, 26, 4, leaf1);
+      drawPuffyBlob(g, baseX + sway*0.8, baseY - h1 - 38, 18, 3, leaf1);
+      drawPuffyBlob(g, baseX + sway*1.4, baseY - h1 - 52, 22, 4, leaf2);
+
+      // ближняя «трава»
+      if (t.row===0) {
+        g.fillStyle = hsla(120, 30, lerp(18, 26, dayness), 0.9);
+        for (let i=0;i<8;i++) {
+          const xx = baseX + rand(-26,26);
+          const h = rand(12, 22);
+          g.beginPath();
+          g.moveTo(xx, baseY+12);
+          g.quadraticCurveTo(xx+2, baseY+8, xx+3, baseY - h);
+          g.quadraticCurveTo(xx-2, baseY+8, xx, baseY+12);
+          g.fill();
+        }
+      }
+
+      g.restore();
+    }
+  }
+}
+
+/* ---------------------------
+   Вспомогательный рендер (облака/пухляшки/цвета)
+---------------------------- */
+function drawCloud(g, x, y, s=1, puff=5) {
+  g.save();
+  g.translate(x,y);
+  g.scale(s*1.4, s*1.2);
+  g.fillStyle = 'rgba(255,255,255,0.9)';
+  const p = [];
+  for (let i=0;i<puff;i++) p.push({x: (i-puff*0.5)*28 + rand(-4,4), y: rand(-6, 8), r: rand(16,28)});
+  g.beginPath();
+  for (let i=0;i<p.length;i++){
+    const c = p[i];
+    g.moveTo(c.x+c.r, c.y);
+    g.arc(c.x, c.y, c.r, 0, TAU);
+  }
+  g.fill();
+
+  // тень снизу
+  const grd = g.createLinearGradient(0, -10, 0, 30);
+  grd.addColorStop(0, 'rgba(0,0,0,0)');
+  grd.addColorStop(1, 'rgba(0,0,0,0.15)');
+  g.fillStyle = grd;
+  g.fillRect(-80, -10, 160, 50);
+  g.restore();
+}
+
+function drawPuffyBlob(g, x, y, r=20, blobs=4, color='#8bc34a') {
+  g.save();
+  g.translate(x,y);
+  g.fillStyle = color;
+  for (let i=0;i<blobs;i++){
+    const a = (i/blobs)*TAU + rand(-0.2,0.2);
+    const rr = r + rand(-6,6);
+    g.beginPath();
+    g.arc(Math.cos(a)*r*0.6, Math.sin(a)*r*0.4, rr, 0, TAU);
+    g.fill();
+  }
+  g.restore();
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!m) return {r:0,g:0,b:0};
+  return {r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16)};
+}
+function rgbToHex(r,g,b) {
+  const h = (n)=> ('0'+n.toString(16)).slice(-2);
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+function mixColor(a,b,t){
+  const ca = hexToRgb(a), cb = hexToRgb(b);
+  const r = Math.round(lerp(ca.r, cb.r, t));
+  const g = Math.round(lerp(ca.g, cb.g, t));
+  const bb = Math.round(lerp(ca.b, cb.b, t));
+  return rgbToHex(r,g,bb);
+}
+function tint(base, color, amount){
+  return mixColor(base, color, amount);
+}
+function hsla(h,s,l,a){
+  return `hsla(${h} ${s}% ${l}% / ${a})`;
+}
+
+/* ---------------------------
+   Сцена «оболочки» отеля
+---------------------------- */
+class HotelShellScene extends BaseScene {
+  constructor(game) {
+    super(game);
+    this.bg = new LiveBackground();
+    // Для теста: мигающий градиент «пола» — позже заменим на изометрический ландшафт отеля
+    this.t = 0;
+  }
+  onEnter() {
+    // запускаем музыку
+    this.game.audio.playMusic();
+  }
+  onLeave() {
+    // оставляем музыку играть сквозь сцены
+  }
+  update(dt) {
+    const tod = this.game.time.timeOfDay;
+    this.bg.update(dt, tod);
+    this.t += dt;
+    // HUD обновление
+    document.getElementById('timeChip').innerHTML = `Время: <b>${this.game.time.display}</b>`;
+    document.getElementById('dayChip').innerHTML = `День: <b>${this.game.time.dayCount}</b>`;
+  }
+  render(g) {
+    const tod = this.game.time.timeOfDay;
+    this.bg.render(g, tod);
+
+    // Место под будущий отель: мягкая площадка‑подиум
+    renderGroundPad(g, tod);
+
+    // Тестовая подпись
+    g.save();
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.font = '700 40px Nunito, system-ui';
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.fillText('Здесь появится твой кото‑отель', VIRTUAL_W*0.5, VIRTUAL_H*0.78);
+    g.font = '400 20px Nunito, system-ui';
+    g.fillStyle = 'rgba(255,255,255,0.7)';
+    g.fillText('Часть 2/6 — изометрический рендер, спрайты котиков и глубина', VIRTUAL_W*0.5, VIRTUAL_H*0.78 + 34);
+    g.restore();
+  }
+}
+
+function renderGroundPad(g, tod) {
+  const y = VIRTUAL_H*0.82;
+  const w = VIRTUAL_W*0.72;
+  const x = VIRTUAL_W*0.14;
+  // эллипс‑основание
+  g.save();
+  // тень
+  g.fillStyle = 'rgba(0,0,0,0.25)';
+  g.beginPath(); g.ellipse(VIRTUAL_W*0.5, y+12, w*0.46, 38, 0, 0, TAU); g.fill();
+  // подиум
+  const grd = g.createLinearGradient(0, y-120, 0, y+80);
+  grd.addColorStop(0, tint('#4a5a6e', '#93c5fd', 0.15));
+  grd.addColorStop(1, '#2a3645');
+  g.fillStyle = grd;
+  g.beginPath(); g.ellipse(VIRTUAL_W*0.5, y, w*0.5, 50, 0, 0, TAU); g.fill();
+
+  // блики
+  const shine = g.createRadialGradient(VIRTUAL_W*0.5, y-14, 10, VIRTUAL_W*0.5, y-14, 220);
+  shine.addColorStop(0, 'rgba(255,255,255,0.25)');
+  shine.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = shine;
+  g.beginPath(); g.ellipse(VIRTUAL_W*0.5, y-6, w*0.46, 40, 0, 0, TAU); g.fill();
+  g.restore();
+}
+
+/* ---------------------------
+   Аудио: эмбиент‑музыка, громкость
+---------------------------- */
+class AudioManager {
+  constructor() {
+    this.ctx = null;
+    this.master = null;
+    this.musicGain = null;
+    this.ready = false;
+    this.playing = false;
+
+    this.seq = null; // последовательность нот
+    this.nextNoteTime = 0;
+    this.tempo = 60; // bpm для арпеджио
+    this.baseFreq = 220; // A3
+    this.scale = [0,2,3,5,7,9,10,12]; // минорная гамма
+    this.chords = [
+      [0,3,7],   // Am
+      [5,8,12],  // F
+      [7,10,14], // G
+      [2,5,9],   // Em
+    ];
+    this.chordIndex = 0;
+    this.barBeats = 4;
+    this.beatIdx = 0;
+
+    this.targetVolume = 0.45;
+    this.muted = false;
+
+    // Связь с UI
+    this.attachUI();
+  }
+
+  attachUI() {
+    const v = document.getElementById('musicVolume');
+    const mute = document.getElementById('mute');
+    v.addEventListener('input', () => {
+      this.setVolume(parseFloat(v.value));
+      mute.textContent = (this.muted || this.getVolume() <= 0.001) ? '🔇' : '🔊';
+    });
+    mute.addEventListener('click', () => {
+      this.muted = !this.muted;
+      mute.textContent = this.muted ? '🔇' : '🔊';
+      this.updateGains();
+    });
+
+    // Скорость / Пауза
+    const s1 = document.getElementById('speed1');
+    const s2 = document.getElementById('speed2');
+    const s4 = document.getElementById('speed4');
+    const pause = document.getElementById('pause');
+
+    const buttons = [s1,s2,s4,pause];
+    const setActive = (btn) => buttons.forEach(b => b.classList.toggle('active', b===btn));
+
+    s1.addEventListener('click', ()=> { game.speed=1; game.paused=false; setActive(s1); });
+    s2.addEventListener('click', ()=> { game.speed=2; game.paused=false; setActive(s2); });
+    s4.addEventListener('click', ()=> { game.speed=4; game.paused=false; setActive(s4); });
+    pause.addEventListener('click', ()=> { game.paused=!game.paused; setActive(pause); });
+
+    setActive(s1);
+  }
+
+  getVolume() { return this.targetVolume; }
+  setVolume(v) {
+    this.targetVolume = clamp(v, 0, 1);
+    this.updateGains();
+  }
+  updateGains() {
+    if (!this.musicGain) return;
+    const vol = this.muted ? 0 : this.targetVolume;
+    const t = this.ctx.currentTime + 0.05;
+    this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.musicGain.gain.linearRampToValueAtTime(vol, t);
+  }
+
+  unlock() {
+    if (!this.ctx) this.prepareMusic();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  prepareMusic() {
+    if (this.ready) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'playback' });
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.9;
+    this.master.connect(this.ctx.destination);
+
+    this.musicGain = this.ctx.createGain();
+    this.musicGain.gain.value = this.targetVolume;
+    this.musicGain.connect(this.master);
+
+    // Мягкий мастер‑фильтр
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 14000;
+    lp.Q.value = 0.2;
+    this.musicGain.connect(lp).connect(this.master);
+
+    this.ready = true;
+  }
+
+  suspend() { if (this.ctx) this.ctx.suspend(); }
+  resume() { if (this.ctx) this.ctx.resume(); }
+
+  playMusic() {
+    if (!this.ready) this.prepareMusic();
+    if (this.playing) return;
+    this.playing = true;
+    this.nextNoteTime = this.ctx.currentTime + 0.05;
+    this.scheduleLoop();
+  }
+
+  scheduleLoop() {
+    // Планировщик музыкальных событий
+    const scheduleAhead = 0.2; // сек
+    const lookahead = 0.025;   // таймер
+    const tick = () => {
+      if (!this.playing) return;
+      const ct = this.ctx.currentTime;
+      while (this.nextNoteTime < ct + scheduleAhead) {
+        this.scheduleBeat(this.nextNoteTime);
+        const spb = 60 / this.tempo;
+        this.nextNoteTime += spb; // следующая доля
+        this.beatIdx = (this.beatIdx + 1) % this.barBeats;
+        if (this.beatIdx === 0) this.chordIndex = (this.chordIndex + 1) % this.chords.length;
+      }
+      setTimeout(tick, lookahead*1000);
+    };
+    tick();
+  }
+
+  scheduleBeat(t) {
+    // текущий аккорд
+    const chord = this.chords[this.chordIndex];
+    // арпеджио — выбираем ноты из аккорда и соседние из гаммы
+    const seq = [
+      chord[0], chord[1], chord[2], chord[1],
+      chord[0]+12, chord[1], chord[2], chord[1]
+    ];
+    const note = seq[this.beatIdx % seq.length];
+
+    // Бас мягкий
+    if (this.beatIdx === 0) this.playVoice(t, this.baseFreq * Math.pow(2, (chord[0]-12)/12), 0.4, 'sine', 0.9, 140);
+    // Пэд‑фон (медленно, шершавый)
+    if (this.beatIdx === 0) {
+      chord.forEach((n,i)=> this.playPad(t + i*0.02, this.baseFreq * Math.pow(2, n/12), 2.5));
+    }
+    // Арпеджио
+    this.playPluck(t, this.baseFreq * Math.pow(2, note/12), 0.25);
+  }
+
+  playVoice(t, freq, gain=0.3, type='sine', dur=1.0, cutoff=200) {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'lowpass'; f.frequency.value = cutoff; f.Q.value = 0.3;
+
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t+0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+
+    o.connect(g).connect(f).connect(this.musicGain);
+    o.start(t);
+    o.stop(t+dur+0.05);
+  }
+
+  playPad(t, freq, dur=2.0) {
+    // шум через фильтр + синус
+    const noise = this.ctx.createBufferSource();
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate*dur, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * 0.3;
+    noise.buffer = buffer; noise.loop = false;
+
+    const o = this.ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    o.frequency.linearRampToValueAtTime(freq*0.999, t+dur);
+
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t+0.3);
+    g.gain.linearRampToValueAtTime(0.14, t+dur*0.6);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur+0.2);
+
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(2800, t);
+    lp.frequency.linearRampToValueAtTime(1800, t+dur);
+
+    const mix = this.ctx.createGain();
+    mix.gain.value = 0.7;
+
+    noise.connect(lp);
+    o.connect(mix);
+    lp.connect(mix);
+    mix.connect(g).connect(this.musicGain);
+
+    noise.start(t);
+    noise.stop(t+dur);
+    o.start(t);
+    o.stop(t+dur+0.2);
+  }
+
+  playPluck(t, freq, dur=0.25) {
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 2200; bp.Q.value = 2.4;
+
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(freq, t);
+
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+
+    o.connect(bp).connect(g).connect(this.musicGain);
+    o.start(t);
+    o.stop(t+dur+0.05);
+  }
+
+  update(worldTime) {
+    if (!this.ready) return;
+    // динамика фильтра/тональности днём и ночью
+    const tod = worldTime.timeOfDay;
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU)); // 1 днём
+    const targetTempo = lerp(54, 66, dayness); // днем чуть бодрее
+    this.tempo = lerp(this.tempo, targetTempo, 0.02);
+
+    if (this.musicGain) {
+      // легкое «приглушение» ночью
+      const vol = (this.muted ? 0 : this.targetVolume) * lerp(0.8, 1.0, dayness);
+      const t = this.ctx.currentTime + 0.05;
+      this.musicGain.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.musicGain.gain.linearRampToValueAtTime(vol, t);
+    }
+  }
+}
+
+/* ---------------------------
+   Инициализация игры
+---------------------------- */
+const canvas = document.getElementById('game');
+const game = new Game(canvas);
+
+// Небольшие UX‑мелочи: фокус по клику, скрытие подсказки
+let tooltip = document.querySelector('.tooltip');
+canvas.addEventListener('click', () => {
+  tooltip && (tooltip.style.display = 'none');
+});
+
+// Клавиатура: пробел — пауза, 1/2/3 — скорость
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { game.paused = !game.paused; e.preventDefault(); }
+  if (e.key === '1') game.speed = 1;
+  if (e.key === '2') game.speed = 2;
+  if (e.key === '3') game.speed = 4;
+});
+
+</script>
+<script type="module">
+/* =========================================================================
+   Кото-Отель — Idle 2.5D
+   Часть 2/6: Изометрия, котики, мебель, глубина, камера, анимации
+   ========================================================================= */
+
+/* ---------------------------
+   Изометрическая математика и камера
+---------------------------- */
+const ISO = {
+  tileW: 128,
+  tileH: 64,
+  originX: VIRTUAL_W * 0.5,
+  originY: VIRTUAL_H * 0.72,
+  toScreen(x,y,z=0){
+    const sx = (x - y) * (this.tileW/2) + this.originX;
+    const sy = (x + y) * (this.tileH/2) + this.originY - z*this.tileH;
+    return {x:sx, y:sy};
+  },
+  fromScreen(sx, sy, z=0){
+    const x = ((sx - this.originX) / (this.tileW/2) + (sy - this.originY + z*this.tileH) / (this.tileH/2)) / 2;
+    const y = ((sy - this.originY + z*this.tileH) / (this.tileH/2) - (sx - this.originX) / (this.tileW/2)) / 2;
+    return {x, y, z};
+  }
+};
+
+class Camera {
+  constructor() {
+    this.x = 0; this.y = 0; // в изометрических координатах смещаем «мир»
+    this.zoom = 1.0;
+    this.shakeT = 0; this.shakeA = 0;
+  }
+  apply(g) {
+    g.save();
+    g.translate(0,0);
+    g.scale(this.zoom, this.zoom);
+  }
+  unapply(g){
+    g.restore();
+  }
+  screenOfIso(ix,iy,iz=0){
+    const p = ISO.toScreen(ix - this.x, iy - this.y, iz);
+    return p;
+  }
+  update(dt) {
+    // тут можно добавить инерцию/параллакс
+    if (this.shakeT > 0) this.shakeT = Math.max(0, this.shakeT - dt);
+  }
+  kickShake(a=1, t=0.2){ this.shakeA = a; this.shakeT = t; }
+}
+
+/* ---------------------------
+   Визуальные утилиты
+---------------------------- */
+function drawIsoTile(g, ix, iy, iz, color, stroke='rgba(0,0,0,0.15)') {
+  const a = ISO.toScreen(ix,iy,iz);
+  const w = ISO.tileW/2, h = ISO.tileH/2;
+  g.save();
+  g.translate(a.x, a.y);
+  g.beginPath();
+  g.moveTo(0, -h);
+  g.lineTo(w, 0);
+  g.lineTo(0, h);
+  g.lineTo(-w, 0);
+  g.closePath();
+  g.fillStyle = color;
+  g.fill();
+  if (stroke) {
+    g.strokeStyle = stroke;
+    g.lineWidth = 1;
+    g.stroke();
+  }
+  g.restore();
+}
+
+function drawShadowBlob(g, sx, sy, r=24, a=0.25) {
+  g.save();
+  g.globalAlpha = a;
+  g.fillStyle = '#000';
+  g.beginPath(); g.ellipse(sx, sy, r*1.3, r*0.55, 0, 0, TAU); g.fill();
+  g.restore();
+}
+
+function nightGlow(g, x, y, r, color, a=0.5) {
+  const grd = g.createRadialGradient(x,y,0,x,y,r);
+  grd.addColorStop(0, color);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.save();
+  g.globalAlpha = a;
+  g.fillStyle = grd;
+  g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
+  g.restore();
+}
+
+/* ---------------------------
+   Спрайты мебели (процедурные)
+---------------------------- */
+const Furniture = {
+  drawReception(g, sx, sy, w=160, h=60, tier=1, night=0) {
+    // корпус
+    const base = ['#6b7f99','#7f95b3','#95a9c6','#a9bbd7','#c3d2ea'][tier-1] || '#95a9c6';
+    const top = tint(base, '#ffffff', 0.18);
+    const side = tint(base, '#000000', 0.18);
+
+    g.save();
+    g.translate(sx, sy);
+    // тень
+    g.globalAlpha = 0.25;
+    g.fillStyle = '#000';
+    g.beginPath(); g.ellipse(0, 24, 90, 18, 0, 0, TAU); g.fill();
+    g.globalAlpha = 1;
+
+    // верх (параллелограмм)
+    g.fillStyle = top;
+    g.beginPath();
+    g.moveTo(-w/2, -h/2);
+    g.lineTo(0, -h);
+    g.lineTo(w/2, -h/2);
+    g.lineTo(0, 0);
+    g.closePath(); g.fill();
+
+    // фронт
+    g.fillStyle = base;
+    g.beginPath();
+    g.moveTo(-w/2, -h/2);
+    g.lineTo(0, 0);
+    g.lineTo(0, 36);
+    g.lineTo(-w/2, 18);
+    g.closePath(); g.fill();
+
+    // бок
+    g.fillStyle = side;
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(w/2, -h/2);
+    g.lineTo(w/2, 18);
+    g.lineTo(0, 36);
+    g.closePath(); g.fill();
+
+    // вывеска «Meowtel»
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.font = '700 16px Nunito, system-ui';
+    g.textAlign = 'center';
+    g.fillText('Meowtel', -w*0.1, 6);
+
+    // лампа на стойке
+    g.fillStyle = '#d7c29b';
+    g.fillRect(w*0.2-4, -h*0.6, 8, 20);
+    g.fillStyle = '#ffe8b3';
+    g.beginPath(); g.arc(w*0.2, -h*0.6-10, 14, 0, TAU); g.fill();
+
+    // ночное свечение лампы
+    if (night > 0.3) nightGlow(g, w*0.2, -h*0.6-10, 44, 'rgba(255,232,179,0.9)', night*0.9);
+
+    g.restore();
+  },
+
+  drawPlant(g, sx, sy, night=0) {
+    g.save();
+    g.translate(sx, sy);
+    // горшок
+    g.fillStyle = '#6b4d3b';
+    g.beginPath();
+    g.ellipse(0, 0, 22, 10, 0, 0, TAU); g.fill();
+    g.fillRect(-18, -22, 36, 20);
+    g.beginPath();
+    g.ellipse(0, -22, 18, 6, 0, 0, TAU); g.fill();
+
+    // листья
+    for (let i=0;i<6;i++) {
+      const a = -Math.PI/2 + (i-2.5)*0.25;
+      g.fillStyle = hsla(110 + i*6, 40, 34 + i*2, 1);
+      g.beginPath();
+      g.moveTo(0, -22);
+      g.quadraticCurveTo(Math.cos(a)*40, -28 + Math.sin(a)*20, Math.cos(a)*20, -44 + Math.sin(a)*16);
+      g.quadraticCurveTo(Math.cos(a)*8, -30, 0, -22);
+      g.fill();
+    }
+    g.restore();
+  },
+
+  drawSofa(g, sx, sy, tier=1) {
+    const base = ['#9fc7f1','#f1a6b5','#c9f1a6','#f1e0a6','#bca6f1'][tier-1] || '#9fc7f1';
+    const side = tint(base, '#000', 0.22);
+    g.save();
+    g.translate(sx, sy);
+    // тень
+    g.globalAlpha = 0.2;
+    g.fillStyle = '#000';
+    g.beginPath(); g.ellipse(0, 18, 70, 14, 0, 0, TAU); g.fill();
+    g.globalAlpha = 1;
+
+    // основание
+    g.fillStyle = base;
+    g.fillRect(-60, -24, 120, 28);
+    g.fillStyle = side;
+    g.fillRect(-60, 4, 120, 18);
+
+    // спинка
+    g.fillStyle = base;
+    g.beginPath();
+    g.moveTo(-64, -24);
+    g.quadraticCurveTo(0, -52, 64, -24);
+    g.lineTo(64, -10);
+    g.quadraticCurveTo(0, -36, -64, -10);
+    g.closePath(); g.fill();
+
+    // подушки
+    g.fillStyle = tint(base, '#fff', 0.14);
+    g.fillRect(-44, -18, 40, 22);
+    g.fillRect(4, -18, 40, 22);
+    g.restore();
+  },
+
+  drawLamp(g, sx, sy, night=0) {
+    g.save();
+    g.translate(sx, sy);
+    // стойка
+    g.strokeStyle = '#c3b8a6';
+    g.lineWidth = 6;
+    g.beginPath();
+    g.moveTo(0, -46); g.lineTo(0, 0); g.stroke();
+    // плафон
+    g.fillStyle = '#ffe8b3';
+    g.beginPath();
+    g.moveTo(-20, -46);
+    g.lineTo(20, -46);
+    g.lineTo(10, -72);
+    g.lineTo(-10, -72);
+    g.closePath(); g.fill();
+
+    if (night > 0.2) nightGlow(g, 0, -58, 100, 'rgba(255,232,179,0.9)', night*0.6);
+    g.restore();
+  },
+
+  drawBed(g, sx, sy, tier=1) {
+    const wood = '#6b4d3b';
+    const sheet = ['#cfe6ff','#ffd6e8','#e2ffd6','#fff0c9','#e0d6ff'][tier-1] || '#cfe6ff';
+    g.save();
+    g.translate(sx, sy);
+    // каркас
+    g.fillStyle = wood;
+    g.fillRect(-46, -14, 92, 12);
+    g.fillRect(-46, -2, 92, 12);
+    // матрас
+    g.fillStyle = sheet;
+    g.fillRect(-42, -20, 84, 16);
+    // подушка
+    g.fillStyle = '#fff';
+    g.fillRect(-40, -28, 36, 10);
+    g.restore();
+  },
+
+  drawDoor(g, sx, sy, label='101', light=0) {
+    g.save();
+    g.translate(sx, sy);
+    g.fillStyle = '#7f6b5a';
+    g.fillRect(-18, -50, 36, 50);
+    g.fillStyle = '#e8d7c6';
+    g.font = '700 14px Nunito, system-ui';
+    g.textAlign = 'center';
+    g.fillText(label, 0, -26);
+    g.fillStyle = '#d1b28a';
+    g.beginPath(); g.arc(10, -24, 2.5, 0, TAU); g.fill();
+    if (light>0.1) nightGlow(g, 0, -44, 40, 'rgba(255,240,200,0.8)', light*0.5);
+    g.restore();
+  },
+
+  drawElevator(g, sx, sy, level=1, light=0) {
+    g.save();
+    g.translate(sx, sy);
+    g.fillStyle = '#9aa8b8';
+    g.fillRect(-28, -64, 56, 64);
+    g.fillStyle = '#c6d2df';
+    g.fillRect(-24, -60, 48, 60);
+    g.fillStyle = '#6f7a86';
+    g.fillRect(-24, -60, 48, 6);
+    g.fillStyle = '#e6edf5';
+    g.font = '700 14px Nunito, system-ui';
+    g.textAlign = 'center';
+    g.fillText('⇵', 0, -40);
+    if (light>0.2) nightGlow(g, 0, -40, 60, 'rgba(200,230,255,0.9)', light*0.4);
+    g.restore();
+  }
+};
+
+/* ---------------------------
+   Спрайт котика (процедурный)
+---------------------------- */
+class CatSprite {
+  constructor(color='#f5c6a5', accent='#7f4b3e') {
+    this.color = color;
+    this.accent = accent;
+    this.blinkT = rand(1,3);
+    this.blink = 0;
+    this.wave = 0;
+  }
+  update(dt, speed=1) {
+    this.blinkT -= dt;
+    if (this.blinkT <= 0) {
+      this.blink = 1; this.blinkT = rand(2,4);
+    }
+    this.blink = Math.max(0, this.blink - dt*6);
+    this.wave += dt * 4 * speed;
+  }
+  draw(g, sx, sy, dir=0, walkPhase=0, waving=false) {
+    // dir: -1=лево, 0=фронт, 1=право, 2=спина (условно)
+    g.save();
+    g.translate(sx, sy);
+
+    const bob = Math.sin(walkPhase*TAU)*2.5;
+    g.translate(0, -bob);
+
+    // тень
+    drawShadowBlob(g, 0, 18, 22, 0.22);
+
+    // хвост
+    g.save();
+    g.translate(-10 + dir*6, 0);
+    const tailSwing = Math.sin(walkPhase*TAU*2 + 0.4)*10;
+    g.rotate((-10 + tailSwing) * Math.PI/180);
+    g.strokeStyle = this.accent;
+    g.lineWidth = 6;
+    g.lineCap = 'round';
+    g.beginPath();
+    g.moveTo(0,0);
+    g.quadraticCurveTo(-10,-6, -18,-2);
+    g.stroke();
+    g.restore();
+
+    // тело
+    g.fillStyle = this.color;
+    g.beginPath();
+    g.ellipse(0, -8, 18, 14, 0, 0, TAU); g.fill();
+
+    // лапы (простейшая анимация шага)
+    g.strokeStyle = this.accent;
+    g.lineCap = 'round';
+    g.lineWidth = 5;
+    const step = Math.sin(walkPhase*TAU);
+    g.beginPath();
+    g.moveTo(-10, 6); g.lineTo(-10, 12 + step*4); g.stroke();
+    g.beginPath();
+    g.moveTo(10, 6); g.lineTo(10, 12 - step*4); g.stroke();
+
+    // голова
+    g.fillStyle = this.color;
+    g.beginPath();
+    g.ellipse(0, -26, 16, 14, 0, 0, TAU); g.fill();
+
+    // уши
+    g.fillStyle = this.accent;
+    g.beginPath(); g.moveTo(-12, -36); g.lineTo(-4, -30); g.lineTo(-12, -28); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(12, -36); g.lineTo(4, -30); g.lineTo(12, -28); g.closePath(); g.fill();
+
+    // мордочка
+    const blinkH = this.blink>0 ? 0.5 : 3;
+    g.fillStyle = '#2b2b2b';
+    g.beginPath(); g.arc(-5, -26, 2, 0, TAU); g.fill();
+    g.beginPath(); g.arc(5, -26, 2, 0, TAU); g.fill();
+    if (this.blink>0) {
+      g.fillRect(-7, -26, 4, 1);
+      g.fillRect(3, -26, 4, 1);
+    }
+    g.fillStyle = '#e38b6c';
+    g.beginPath(); g.arc(0, -22, 2, 0, TAU); g.fill();
+
+    // лапкой машем
+    if (waving) {
+      g.save();
+      g.translate(12, -10);
+      const w = Math.sin(this.wave)*8;
+      g.rotate(w * Math.PI/180);
+      g.strokeStyle = this.accent;
+      g.lineWidth = 5; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(0,0); g.lineTo(0,10); g.stroke();
+      g.restore();
+    }
+
+    g.restore();
+  }
+}
+
+/* ---------------------------
+   Сущность в изометрии
+---------------------------- */
+class IsoEntity {
+  constructor({x=0,y=0,z=0, sprite=null, kind='cat'}){
+    this.x=x; this.y=y; this.z=z;
+    this.sprite = sprite;
+    this.kind = kind;
+    this.speed = 1;
+    this.walkPhase = 0;
+    this.dir = 0;
+    this.waving = false;
+    this.name = kind==='cat' ? this.randomCatName() : '';
+    // для простого скрипта движения
+    this.target = null;
+    this.waitT = 0;
+  }
+  randomCatName(){
+    const a = ['Мяуся','Пушок','Снежок','Лапус','Тигруша','Пиксель','Ирис','Мята','Карамель','Зефир'];
+    return a[randi(0,a.length-1)];
+  }
+  isoToScreen(){ return ISO.toScreen(this.x, this.y, this.z); }
+  update(dt, scene) {
+    if (this.kind==='cat') this.sprite?.update(dt, this.speed);
+
+    // примитивная ИИ-рутина: идти к цели, ждать, выбрать новую цель
+    if (!this.target) {
+      this.waitT -= dt;
+      if (this.waitT<=0) {
+        const p = scene.pickRandomSpot();
+        this.target = {x:p.x, y:p.y};
+        this.waving = chance(0.25);
+        this.waitT = rand(1,3);
+      }
+    } else {
+      const dx = this.target.x - this.x;
+      const dy = this.target.y - this.y;
+      const d = Math.hypot(dx,dy);
+      const sp = 1.5 * this.speed;
+      if (d < 0.05) {
+        this.x = this.target.x; this.y = this.target.y;
+        this.target = null;
+      } else {
+        this.x += (dx/d) * sp * dt;
+        this.y += (dy/d) * sp * dt;
+        this.walkPhase = (this.walkPhase + dt * sp*0.5) % 1;
+        // направление (-1,0,1)
+        this.dir = Math.abs(dx) > Math.abs(dy) ? (dx>0 ? 1 : -1) : 0;
+      }
+    }
+  }
+  render(g, scene) {
+    const p = scene.cam.screenOfIso(this.x, this.y, this.z);
+    // Подсказка над головой иногда
+    if (chance(0.002)) scene.spawnEmote(p.x, p.y-50, ['😺','😻','😼','😹','💤','🍣','☕','🧹'][randi(0,7)], 1.5);
+
+    if (this.kind==='cat') this.sprite?.draw(g, p.x, p.y, this.dir, this.walkPhase, this.waving);
+    else if (typeof this.sprite === 'function') this.sprite(g, p.x, p.y);
+  }
+}
+
+/* ---------------------------
+   Партиклы-эмодзи (эмоции гостей/персонала)
+---------------------------- */
+class Emote {
+  constructor(x,y,txt,time=1.2) {
+    this.x=x; this.y=y; this.txt=txt; this.t=time; this.T=time;
+  }
+  update(dt) { this.t -= dt; }
+  render(g) {
+    const k = clamp(1 - this.t/this.T, 0, 1);
+    const y = this.y - k*24;
+    const a = 1 - k;
+    g.save();
+    g.globalAlpha = a;
+    g.fillStyle = 'rgba(0,0,0,0.25)';
+    g.beginPath(); g.ellipse(this.x+2, y+2, 18, 14, 0, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    g.beginPath(); g.ellipse(this.x, y, 18, 14, 0, 0, TAU); g.fill();
+    g.fillStyle = '#1b2130';
+    g.font = '700 14px Nunito, system-ui';
+    g.textAlign = 'center';
+    g.fillText(this.txt, this.x, y+1);
+    g.restore();
+  }
+}
+
+/* ---------------------------
+   Сцена: изометрический отель (оболочка)
+---------------------------- */
+class HotelIsoScene extends BaseScene {
+  constructor(game) {
+    super(game);
+    this.cam = new Camera();
+    this.bg = new LiveBackground();
+    this.entities = [];
+    this.staticItems = [];
+    this.emotes = [];
+    this.t = 0;
+
+    // геометрия площадки и комнат
+    this.grid = { w: 12, h: 8 };
+    this.pad = { x: -3, y: -1, w: 6, h: 4 }; // платформа под здание (условно)
+    this.rooms = [
+      { id:'101', x: 0, y: 0 },
+      { id:'102', x: 1.2, y: -0.2 },
+      { id:'103', x: 2.4, y: -0.4 },
+    ];
+
+    this.initStatic();
+    this.spawnInitialCats();
+
+    // ввод
+    this.pointer = {x:0,y:0};
+    game.canvas.addEventListener('mousemove', (e)=> {
+      const rect = game.canvas.getBoundingClientRect();
+      const px = (e.clientX - rect.left) * (VIRTUAL_W / game.canvas.width);
+      const py = (e.clientY - rect.top) * (VIRTUAL_H / game.canvas.height);
+      this.pointer = {x:px, y:py};
+    });
+    game.canvas.addEventListener('click', ()=> {
+      // машем лапкой ближайшего кота
+      let best=null, bd=1e9;
+      for (const e of this.entities) {
+        if (e.kind!=='cat') continue;
+        const p = this.cam.screenOfIso(e.x,e.y,e.z);
+        const d = Math.hypot(p.x - this.pointer.x, p.y - this.pointer.y);
+        if (d < bd) { bd=d; best=e; }
+      }
+      if (best && bd < 120) {
+        best.waving = true;
+        const p = this.cam.screenOfIso(best.x,best.y,best.z);
+        this.spawnEmote(p.x, p.y-50, chance(0.5)?'😻':'😹', 1.4);
+        this.game.audio.kick && this.game.audio.kick();
+      }
+    });
+  }
+
+  onEnter(){
+    // пусть музыка уже играет — из Части 1
+  }
+
+  initStatic() {
+    // ресепшн
+    this.staticItems.push({
+      zOrder: ()=> {
+        const p = this.cam.screenOfIso(-1.4, 0.6, 0);
+        return p.y;
+      },
+      draw: (g)=> {
+        const p = this.cam.screenOfIso(-1.4, 0.6, 0);
+        const night = this.nightFactor();
+        Furniture.drawReception(g, p.x, p.y, 160, 60, 1, night);
+      }
+    });
+
+    // лампа торшер справа
+    this.staticItems.push({
+      zOrder: ()=> this.cam.screenOfIso(2.6, 1.2, 0).y,
+      draw: (g)=> {
+        const p = this.cam.screenOfIso(2.6, 1.2, 0);
+        Furniture.drawLamp(g, p.x, p.y, this.nightFactor());
+      }
+    });
+
+    // диван слева
+    this.staticItems.push({
+      zOrder: ()=> this.cam.screenOfIso(-2.6, 1.2, 0).y,
+      draw: (g)=> {
+        const p = this.cam.screenOfIso(-2.6, 1.2, 0);
+        Furniture.drawSofa(g, p.x, p.y, 1);
+      }
+    });
+
+    // растение у ресепшн
+    this.staticItems.push({
+      zOrder: ()=> this.cam.screenOfIso(-0.6, 0.9, 0).y,
+      draw: (g)=> {
+        const p = this.cam.screenOfIso(-0.6, 0.9, 0);
+        Furniture.drawPlant(g, p.x, p.y, this.nightFactor());
+      }
+    });
+
+    // лифт и двери этажей (пока один этаж)
+    this.staticItems.push({
+      zOrder: ()=> this.cam.screenOfIso(3.2, -0.2, 0).y,
+      draw: (g)=> {
+        const p = this.cam.screenOfIso(3.2, -0.2, 0);
+        Furniture.drawElevator(g, p.x, p.y, 1, this.nightFactor());
+      }
+    });
+    // двери комнат
+    for (const r of this.rooms) {
+      this.staticItems.push({
+        zOrder: ()=> this.cam.screenOfIso(r.x, r.y, 0).y,
+        draw: (g)=> {
+          const p = this.cam.screenOfIso(r.x, r.y, 0);
+          Furniture.drawDoor(g, p.x, p.y, r.id, this.nightFactor()*0.8);
+        }
+      });
+    }
+  }
+
+  spawnInitialCats() {
+    // администратор
+    const admin = new IsoEntity({x:-1.4, y:0.6, z:0, sprite:new CatSprite('#f7d8b8', '#80554a'), kind:'cat'});
+    admin.speed = 0.8;
+    admin.waving = true;
+    this.entities.push(admin);
+
+    // пара гостей
+    for (let i=0;i<3;i++){
+      const guest = new IsoEntity({x: -3 + i*0.6, y: 1.5, z:0, sprite:new CatSprite('#ffc6d0', '#7f4b5a'), kind:'cat'});
+      guest.speed = rand(0.8, 1.2);
+      this.entities.push(guest);
+    }
+  }
+
+  nightFactor() {
+    const tod = this.game.time.timeOfDay;
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    return 1 - dayness; // 0 днём, 1 ночью
+  }
+
+  pickRandomSpot() {
+    // точки: вход, зона дивана, возле лампы, возле комнат и лифта
+    const pts = [
+      {x:-3.2,y:1.6}, {x:-2.6,y:1.2}, {x:-0.6,y:0.9}, {x:-1.4,y:0.6},
+      {x:2.6,y:1.2}, {x:3.2,y:-0.2},
+      ...this.rooms.map(r=>({x:r.x+rand(-0.1,0.1), y:r.y+rand(-0.1,0.1)}))
+    ];
+    return pts[randi(0, pts.length-1)];
+  }
+
+  spawnEmote(x,y,txt,time=1.2){ this.emotes.push(new Emote(x,y,txt,time)); }
+
+  update(dt) {
+    const tod = this.game.time.timeOfDay;
+    this.t += dt;
+    this.cam.update(dt);
+
+    this.bg.update(dt, tod);
+
+    // обновить сущности
+    for (const e of this.entities) e.update(dt, this);
+    for (const em of this.emotes) em.update(dt);
+    this.emotes = this.emotes.filter(e=> e.t>0);
+
+    // иногда прилёт гостей в «входную» зону
+    if (chance(0.01)) {
+      const guest = new IsoEntity({x:-3.4, y:1.7, z:0, sprite:new CatSprite('#c6eaff', '#4b6b7f'), kind:'cat'});
+      guest.speed = rand(0.9,1.3);
+      this.entities.push(guest);
+    }
+  }
+
+  render(g) {
+    const tod = this.game.time.timeOfDay;
+    // фон
+    this.bg.render(g, tod);
+
+    // площадка пола — изометрическая сетка
+    this.renderFloor(g, tod);
+
+    // статические объекты (мебель)
+    // динамические сущности (коты)
+    // y-сортировка: смешиваем вместе и сортируем по экранной Y
+    const drawables = [];
+
+    for (const it of this.staticItems) drawables.push({y: it.zOrder(), draw: it.draw});
+    for (const e of this.entities) {
+      const p = this.cam.screenOfIso(e.x, e.y, e.z);
+      drawables.push({y: p.y, draw: (gg)=> e.render(gg, this)});
+    }
+    drawables.sort((a,b)=> a.y - b.y);
+
+    for (const d of drawables) d.draw(g);
+
+    // эмоции поверх
+    for (const em of this.emotes) em.render(g);
+
+    // подсказка
+    this.renderHint(g);
+
+    // ночная общая тинтовка и свечение окон
+    this.renderNightPass(g, tod);
+  }
+
+  renderFloor(g, tod) {
+    const dayness = Math.max(0, Math.cos((tod - 0.5)*TAU));
+    // Подложка-подиум уже рисуется в Части 1 — здесь рисуем изометрические «плитки»
+    // сетка 12x8, слегка суженная по краям
+    g.save();
+    const colA = tint('#3a4a5e', '#8bb3ff', 0.15*dayness);
+    const colB = tint('#324255', '#8bb3ff', 0.10*dayness);
+
+    for (let y=-1; y<7; y++) {
+      for (let x=-4; x<8; x++) {
+        const c = ((x+y)&1) ? colA : colB;
+        drawIsoTile(g, x*0.6, y*0.6, 0, c, 'rgba(255,255,255,0.03)');
+      }
+    }
+
+    // «подиум» для отеля — рама
+    const base = [
+      {x:-2.2,y:0.2}, {x:2.8,y:-0.8}, {x:3.6,y:0.8}, {x:-1.4,y:1.8}
+    ];
+    g.fillStyle = 'rgba(200,230,255,0.06)';
+    g.beginPath();
+    for (let i=0;i<base.length;i++){
+      const p = ISO.toScreen(base[i].x, base[i].y, 0);
+      if (i===0) g.moveTo(p.x,p.y); else g.lineTo(p.x,p.y);
+    }
+    g.closePath(); g.fill();
+
+    // мягкие «окна» отеля — просто прямоугольники позади дверей
+    for (const r of this.rooms) {
+      const p = this.cam.screenOfIso(r.x, r.y, 0);
+      const w = 52, h = 34;
+      g.fillStyle = dayness>0.3 ? 'rgba(230,245,255,0.15)' : 'rgba(255,240,200,0.12)';
+      g.fillRect(p.x - w/2, p.y - 70, w, h);
+      if (dayness<0.3) nightGlow(g, p.x, p.y - 60, 60, 'rgba(255,240,200,0.7)', (1-dayness)*0.7);
+    }
+
+    g.restore();
+  }
+
+  renderHint(g) {
+    const txt = 'Клик по котику — он помашет лапкой. Наблюдай, как гости бродят по лобби.';
+    g.save();
+    g.fillStyle = 'rgba(20,22,27,0.65)';
+    g.strokeStyle = 'rgba(255,255,255,0.08)';
+    g.lineWidth = 1;
+    const w = 740, h = 36;
+    const x = VIRTUAL_W*0.5 - w/2;
+    const y = VIRTUAL_H*0.1;
+    g.fillRect(x,y,w,h);
+    g.strokeRect(x,y,w,h);
+    g.fillStyle = 'rgba(255,255,255,0.9)';
+    g.font = '600 18px Nunito, system-ui';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText(txt, VIRTUAL_W*0.5, y + h/2 + 1);
+    g.restore();
+  }
+
+  renderNightPass(g, tod) {
+    const night = this.nightFactor();
+    if (night < 0.05) return;
+    // лёгкая синяя «ночь»
+    g.save();
+    g.fillStyle = `rgba(10,20,40,${night*0.15})`;
+    g.fillRect(0,0,VIRTUAL_W,VIRTUAL_H);
+    g.restore();
+  }
+}
+
+/* ---------------------------
+   Регистрация сцены и переход
+---------------------------- */
+game.registerScene('hotel-iso', () => new HotelIsoScene(game));
+
+// Переключаемся на новую изометрическую сцену после короткой паузы,
+// чтобы дать загрузочной сцене отработать.
+setTimeout(() => {
+  try { game.setScene('hotel-iso'); } catch(e){}
+}, 1000);
+
+/* ---------------------------
+   Небольшой «щелчок» звука при приветствии кота (шутливый)
+---------------------------- */
+AudioManager.prototype.kick = function(){
+  if (!this.ready) return;
+  const t = this.ctx.currentTime + 0.01;
+  const o = this.ctx.createOscillator();
+  const g = this.ctx.createGain();
+  const f = this.ctx.createBiquadFilter();
+  f.type = 'lowpass'; f.frequency.value = 1600; f.Q.value = 0.7;
+  o.type = 'sine';
+  o.frequency.setValueAtTime(660, t);
+  o.frequency.exponentialRampToValueAtTime(200, t+0.12);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.2, t+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t+0.2);
+  o.connect(f).connect(g).connect(this.musicGain);
+  o.start(t); o.stop(t+0.22);
+};
+
+</script>
+<script type="module">
+// === Гость AI и навигация ===
+
+// Импортируем зависимости из ранее определенных скриптов
+import { createGuest, updateGuestAI } from './guest.js';
+import { findPath } from './astar.js';
+import { mapGrid } from './map.js';
+import { renderScene, moveCharacter } from './scene.js';
+
+// ==== Конфигурация гостей ====
+const guests = [];
+const numGuests = 5;
+
+// Создание гостей и их начальные позиции
+for (let i = 0; i < numGuests; i++) {
+  const guest = createGuest(i);
+  guest.position = {
+    x: Math.floor(Math.random() * mapGrid.width),
+    y: Math.floor(Math.random() * mapGrid.height)
+  };
+  guests.push(guest);
+}
+
+// ==== Основной игровой цикл ====
+function gameLoop() {
+  for (const guest of guests) {
+    updateGuestAI(guest, mapGrid);
+    moveCharacter(guest.sprite, guest.position);
+  }
+
+  renderScene();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+// === UI и взаимодействие с пользователем ===
+
+// Пример: при клике — гости будут менять направление или цель
+document.addEventListener('click', event => {
+  const targetX = Math.floor(event.clientX / 32);
+  const targetY = Math.floor(event.clientY / 32);
+
+  for (const guest of guests) {
+    guest.path = findPath(mapGrid, guest.position, { x: targetX, y: targetY });
+  }
+});
+
+// === Эмуляция ресепшн ===
+function greetGuest(guest) {
+  const greetings = [
+    'Добро пожаловать!',
+    'Рады вас видеть!',
+    'Как прошёл путь?',
+    'Ваш номер готов.'
+  ];
+  const message = greetings[Math.floor(Math.random() * greetings.length)];
+  console.log(`Гость ${guest.id}: ${message}`);
+}
+
+setInterval(() => {
+  for (const guest of guests) {
+    if (guest.position.x === 5 && guest.position.y === 5) {
+      greetGuest(guest);
+    }
+  }
+}, 3000);
+</script>
+<script type="module">
+// === Ресурсы отеля и обслуживание ===
+
+// Типы ресурсов
+const hotelResources = {
+  towels: 20,
+  snacks: 30,
+  cleaningStaff: 3
+};
+
+// Назначение обслуживания гостю
+function serveGuest(guest) {
+  if (hotelResources.snacks > 0) {
+    hotelResources.snacks--;
+    guest.needs.snack = false;
+    console.log(`Гость ${guest.id} получил снеки.`);
+  }
+
+  if (hotelResources.towels > 0) {
+    hotelResources.towels--;
+    guest.needs.towel = false;
+    console.log(`Гость ${guest.id} получил полотенце.`);
+  }
+}
+
+// Восстановление ресурсов
+function restockResources() {
+  hotelResources.towels += 5;
+  hotelResources.snacks += 10;
+  console.log('Ресурсы пополнены.');
+}
+
+setInterval(restockResources, 15000); // Каждые 15 сек
+
+// === Управление временем суток ===
+
+let currentTime = 8; // Начало: 8 утра
+
+function updateTime() {
+  currentTime = (currentTime + 1) % 24;
+  console.log(`Сейчас ${currentTime}:00`);
+
+  for (const guest of guests) {
+    if (guest.schedule.includes(currentTime)) {
+      serveGuest(guest);
+    }
+  }
+}
+
+setInterval(updateTime, 5000); // Каждые 5 сек
+
+// === Обновление нужд гостей ===
+
+for (const guest of guests) {
+  guest.needs = {
+    snack: Math.random() > 0.5,
+    towel: Math.random() > 0.5
+  };
+  guest.schedule = [9, 13, 18]; // Время обслуживания
+}
+
+// === Анимации объекта (пример с растением) ===
+
+const plant = document.createElement('div');
+plant.className = 'animated-plant';
+document.body.appendChild(plant);
+
+// Простая анимация раскачивания
+setInterval(() => {
+  plant.style.transform = `rotate(${Math.random() * 10 - 5}deg)`;
+}, 1000);
+</script>
+<script type="module">
+// === Персонал отеля ===
+
+const staffMembers = [
+  { id: 1, name: 'Ирина', role: 'менеджер' },
+  { id: 2, name: 'Максим', role: 'уборщик' },
+  { id: 3, name: 'Ольга', role: 'официант' }
+];
+
+function assignTask(staff, guest) {
+  if (guest.needs.towel || guest.needs.snack) {
+    console.log(`${staff.name} (${staff.role}) обслуживает гостя ${guest.id}`);
+    serveGuest(guest);
+  }
+}
+
+setInterval(() => {
+  for (const guest of guests) {
+    const availableStaff = staffMembers[Math.floor(Math.random() * staffMembers.length)];
+    assignTask(availableStaff, guest);
+  }
+}, 4000);
+
+// === Эмоции и состояния гостей ===
+
+const emotionTypes = ['радость', 'усталость', 'любопытство', 'раздражение'];
+
+for (const guest of guests) {
+  guest.emotion = emotionTypes[Math.floor(Math.random() * emotionTypes.length)];
+}
+
+function updateEmotions() {
+  for (const guest of guests) {
+    const change = Math.random() > 0.5;
+    if (change) {
+      guest.emotion = emotionTypes[Math.floor(Math.random() * emotionTypes.length)];
+      console.log(`Гость ${guest.id} теперь чувствует: ${guest.emotion}`);
+    }
+  }
+}
+
+setInterval(updateEmotions, 7000);
+
+// === Диалоги гостей ===
+
+function guestDialog(guest) {
+  const dialogues = {
+    радость: ['Какое прекрасное место!', 'Мне всё нравится.'],
+    усталость: ['Где я могу отдохнуть?', 'Мне нужен перерыв.'],
+    любопытство: ['Что это за объект?', 'Можно мне экскурсию?'],
+    раздражение: ['Здесь слишком шумно!', 'Почему так долго?']
+  };
+
+  const lines = dialogues[guest.emotion];
+  const line = lines[Math.floor(Math.random() * lines.length)];
+  console.log(`Гость ${guest.id} говорит: "${line}"`);
+}
+
+setInterval(() => {
+  for (const guest of guests) {
+    guestDialog(guest);
+  }
+}, 6000);
+</script>
+<script type="module">
+// === Интерфейс управления ===
+
+// Создаем панель управления
+const uiPanel = document.createElement('div');
+uiPanel.id = 'ui-panel';
+uiPanel.style.position = 'fixed';
+uiPanel.style.bottom = '20px';
+uiPanel.style.right = '20px';
+uiPanel.style.padding = '12px';
+uiPanel.style.background = 'rgba(0,0,0,0.6)';
+uiPanel.style.color = '#fff';
+uiPanel.style.borderRadius = '8px';
+uiPanel.style.fontFamily = 'sans-serif';
+uiPanel.style.zIndex = 999;
+
+document.body.appendChild(uiPanel);
+
+// === Кнопка фильтра гостей по эмоции ===
+
+const emotionFilter = document.createElement('select');
+emotionFilter.innerHTML = emotionTypes.map(e => `<option value="${e}">${e}</option>`).join('');
+emotionFilter.onchange = () => {
+  const selected = emotionFilter.value;
+  console.log(`Фильтр: показываем только гостей с эмоцией "${selected}"`);
+  guests.forEach(g => {
+    g.sprite.style.display = (g.emotion === selected) ? 'block' : 'none';
+  });
+};
+uiPanel.appendChild(emotionFilter);
+
+// === Кнопка паузы/запуска симуляции ===
+
+let simulationPaused = false;
+
+const pauseButton = document.createElement('button');
+pauseButton.textContent = '⏸ Пауза';
+pauseButton.onclick = () => {
+  simulationPaused = !simulationPaused;
+  pauseButton.textContent = simulationPaused ? '▶️ Старт' : '⏸ Пауза';
+};
+uiPanel.appendChild(pauseButton);
+
+// === Перехватываем циклы, если симуляция на паузе ===
+
+const originalLoop = gameLoop;
+gameLoop = function() {
+  if (!simulationPaused) originalLoop();
+  requestAnimationFrame(gameLoop);
+};
+gameLoop();
+
+// === Настройки скорости времени ===
+
+const timeSlider = document.createElement('input');
+timeSlider.type = 'range';
+timeSlider.min = 1000;
+timeSlider.max = 10000;
+timeSlider.value = 5000;
+
+timeSlider.oninput = () => {
+  const newInterval = parseInt(timeSlider.value);
+  clearInterval(updateTimeInterval);
+  updateTimeInterval = setInterval(updateTime, newInterval);
+  console.log(`Скорость времени: ${newInterval}мс`);
+};
+
+uiPanel.appendChild(document.createTextNode('Скорость времени'));
+uiPanel.appendChild(timeSlider);
+
+let updateTimeInterval = setInterval(updateTime, 5000);
+</script>
+</body>
+</html>
