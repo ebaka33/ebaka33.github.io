@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Котик-Отель</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+        }
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #uiContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .dialog {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            pointer-events: auto;
+            display: none;
+        }
+        .dialog-text {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .dialog-next {
+            background-color: #FF9800;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            float: right;
+            color: white;
+        }
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .money {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        .upgrade-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            width: 250px;
+            max-height: 70vh;
+            overflow-y: auto;
+            pointer-events: auto;
+        }
+        .upgrade-category {
+            margin-bottom: 15px;
+        }
+        .upgrade-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #3F51B5;
+        }
+        .upgrade-item {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .upgrade-item:hover {
+            background-color: #e3f2fd;
+        }
+        .upgrade-name {
+            font-weight: bold;
+        }
+        .upgrade-cost {
+            color: #4CAF50;
+            font-size: 14px;
+        }
+        .upgrade-desc {
+            font-size: 12px;
+            color: #666;
+        }
+        .upgrade-owned {
+            font-size: 12px;
+            color: #9E9E9E;
+        }
+        .hotel-floor {
+            position: absolute;
+            width: 100%;
+            height: 100px;
+            background-color: #8D6E63;
+            border-top: 2px solid #5D4037;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .room {
+            width: 80px;
+            height: 70px;
+            background-color: #BCAAA4;
+            border: 2px solid #5D4037;
+            border-radius: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        .room-occupied {
+            background-color: #A1887F;
+        }
+        .cat-in-room {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+        }
+        .staff-member {
+            position: absolute;
+            width: 30px;
+            height: 50px;
+            bottom: 0;
+        }
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background-color: #ddd;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+        }
+        #loadingScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #E0F7FA;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .loading-text {
+            font-size: 24px;
+            margin-top: 20px;
+            color: #00796B;
+        }
+        .loading-bar {
+            width: 50%;
+            height: 20px;
+            background-color: #B2DFDB;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .loading-bar-fill {
+            height: 100%;
+            background-color: #00796B;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        #titleScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, #87CEEB, #E0F7FA);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 90;
+        }
+        .title {
+            font-size: 48px;
+            color: #5D4037;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .start-button {
+            background-color: #FF9800;
+            border: none;
+            border-radius: 15px;
+            padding: 15px 30px;
+            font-size: 24px;
+            cursor: pointer;
+            color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+        .title-cat {
+            width: 200px;
+            height: 200px;
+            margin-bottom: 20px;
+        }
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            z-index: 80;
+            display: none;
+        }
+        .notification-text {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .notification-ok {
+            background-color: #FF9800;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="uiContainer">
+            <div class="stats-panel">
+                <div class="money">₽0</div>
+                <div id="reputation">Репутация: 0%</div>
+                <div id="guests">Гости: 0/0</div>
+            </div>
+            
+            <div class="upgrade-panel">
+                <div class="upgrade-category">
+                    <div class="upgrade-title">Отель</div>
+                    <div class="upgrade-item" onclick="buyUpgrade('floor')">
+                        <div class="upgrade-name">Добавить этаж</div>
+                        <div class="upgrade-cost">Стоимость: ₽500</div>
+                        <div class="upgrade-desc">+3 комнаты для гостей</div>
+                        <div class="upgrade-owned" id="floor-owned">Этажей: 1</div>
+                    </div>
+                    <div class="upgrade-item" onclick="buyUpgrade('lobby')">
+                        <div class="upgrade-name">Улучшить лобби</div>
+                        <div class="upgrade-cost">Стоимость: ₽300</div>
+                        <div class="upgrade-desc">+10% к репутации</div>
+                        <div class="upgrade-owned" id="lobby-owned">Уровень: 1</div>
+                    </div>
+                </div>
+                
+                <div class="upgrade-category">
+                    <div class="upgrade-title">Комнаты</div>
+                    <div class="upgrade-item" onclick="buyUpgrade('bed')">
+                        <div class="upgrade-name">Кровать</div>
+                        <div class="upgrade-cost">Стоимость: ₽100</div>
+                        <div class="upgrade-desc">+5% к довольству гостей</div>
+                        <div class="upgrade-owned" id="bed-owned">Уровень: 1</div>
+                    </div>
+                    <div class="upgrade-item" onclick="buyUpgrade('toy')">
+                        <div class="upgrade-name">Игрушки</div>
+                        <div class="upgrade-cost">Стоимость: ₽80</div>
+                        <div class="upgrade-desc">+3% к довольству гостей</div>
+                        <div class="upgrade-owned" id="toy-owned">Уровень: 1</div>
+                    </div>
+                    <div class="upgrade-item" onclick="buyUpgrade('window')">
+                        <div class="upgrade-name">Окно с видом</div>
+                        <div class="upgrade-cost">Стоимость: ₽150</div>
+                        <div class="upgrade-desc">+7% к довольству гостей</div>
+                        <div class="upgrade-owned" id="window-owned">Уровень: 1</div>
+                    </div>
+                </div>
+                
+                <div class="upgrade-category">
+                    <div class="upgrade-title">Персонал</div>
+                    <div class="upgrade-item" onclick="buyUpgrade('receptionist')">
+                        <div class="upgrade-name">Ресепшионист</div>
+                        <div class="upgrade-cost">Стоимость: ₽200</div>
+                        <div class="upgrade-desc">Автоматически заселяет гостей</div>
+                        <div class="upgrade-owned" id="receptionist-owned">0/1</div>
+                    </div>
+                    <div class="upgrade-item" onclick="buyUpgrade('cleaner')">
+                        <div class="upgrade-name">Уборщик</div>
+                        <div class="upgrade-cost">Стоимость: ₽150</div>
+                        <div class="upgrade-desc">+5% к репутации</div>
+                        <div class="upgrade-owned" id="cleaner-owned">0/3</div>
+                    </div>
+                    <div class="upgrade-item" onclick="buyUpgrade('chef')">
+                        <div class="upgrade-name">Повар</div>
+                        <div class="upgrade-cost">Стоимость: ₽250</div>
+                        <div class="upgrade-desc">+10% к довольству гостей</div>
+                        <div class="upgrade-owned" id="chef-owned">0/2</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="dialog" id="dialog">
+                <div class="dialog-text" id="dialog-text"></div>
+                <button class="dialog-next" id="dialog-next">Далее</button>
+            </div>
+        </div>
+        
+        <div id="loadingScreen">
+            <div class="loading-text">Загрузка Котик-Отеля...</div>
+            <div class="loading-bar">
+                <div class="loading-bar-fill" id="loading-bar"></div>
+            </div>
+        </div>
+        
+        <div id="titleScreen">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRkMxMDh9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRkE1MDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRkM2QTF9LnN0NXtmaWxsOiNGRkQwQjJ9LnN0NntmaWxsOiM1RjQwMzd9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjgwIi8+PGNpcmNsZSBjbGFzcz0ic3QxIiBjeD0iMTAwIiBjeT0iODAiIHI9IjQwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iODAiIGN5PSI3MCIgcj0iMTAiLz48Y2lyY2xlIGNsYXNzPSJzdDIiIGN4PSIxMjAiIGN5PSI3MCIgcj0iMTAiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNODAgMTIwYzAgMTAgMjAgMTAgMjAgMHMxMC0yMCAyMC0yMGMxMC0xMCAyMC0xMCAyMCAwIi8+PHBhdGggY2xhc3M9InN0NCIgZD0iTTcwIDE0MGMxMCAxMCAzMCAxMCA0MCAwIi8+PHBhdGggY2xhc3M9InN0NSIgZD0iTTYwIDE2MGMxMCAxMCAzMCAxMCA0MCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iNzUiIGN5PSI3NSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjEyNSIgY3k9Ijc1IiByPSI1Ii8+PC9zdmc+" class="title-cat" alt="Котик">
+            <div class="title">Котик-Отель</div>
+            <button class="start-button" id="startButton">Начать игру</button>
+        </div>
+        
+        <div class="notification" id="notification">
+            <div class="notification-text" id="notification-text"></div>
+            <button class="notification-ok" id="notification-ok">OK</button>
+        </div>
+    </div>
+
+    <script>
+        // Игровые константы
+        const GAME_WIDTH = 1280;
+        const GAME_HEIGHT = 720;
+        const FLOOR_HEIGHT = 100;
+        const ROOM_WIDTH = 80;
+        const ROOM_HEIGHT = 70;
+        const MAX_FLOORS = 5;
+        const ROOMS_PER_FLOOR = 3;
+        
+        // Игровые переменные
+        let gameState = {
+            money: 100,
+            reputation: 50,
+            guests: [],
+            staff: [],
+            floors: 1,
+            lobbyLevel: 1,
+            roomUpgrades: {
+                bed: 1,
+                toy: 1,
+                window: 1
+            },
+            staffCount: {
+                receptionist: 0,
+                cleaner: 0,
+                chef: 0
+            },
+            autoCheckIn: false,
+            lastGuestTime: 0,
+            guestInterval: 10000,
+            lastPaymentTime: 0,
+            paymentInterval: 5000,
+            gameTime: 0,
+            storyProgress: 0,
+            tutorialCompleted: false
+        };
+        
+        // DOM элементы
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const moneyDisplay = document.querySelector('.money');
+        const reputationDisplay = document.getElementById('reputation');
+        const guestsDisplay = document.getElementById('guests');
+        const dialog = document.getElementById('dialog');
+        const dialogText = document.getElementById('dialog-text');
+        const dialogNext = document.getElementById('dialog-next');
+        const loadingScreen = document.getElementById('loadingScreen');
+        const loadingBar = document.getElementById('loading-bar');
+        const titleScreen = document.getElementById('titleScreen');
+        const startButton = document.getElementById('startButton');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notification-text');
+        const notificationOk = document.getElementById('notification-ok');
+        
+        // Изображения
+        const images = {
+            cat1: null,
+            cat2: null,
+            cat3: null,
+            receptionist: null,
+            cleaner: null,
+            chef: null,
+            hotel: null,
+            bed1: null,
+            bed2: null,
+            bed3: null,
+            toy1: null,
+            toy2: null,
+            toy3: null,
+            window1: null,
+            window2: null,
+            window3: null,
+            lobby1: null,
+            lobby2: null,
+            lobby3: null
+        };
+        
+        // Диалоги
+        const dialogs = [
+            "Привет! Я твой дядя Котофей. Я оставляю тебе свой отель, так как уезжаю на пенсию на море.",
+            "Отель немного староват, но с твоей заботой он может стать лучшим местом для котиков в городе!",
+            "Тебе нужно принимать гостей, улучшать номера и нанимать персонал. Чем довольнее гости, тем больше они платят!",
+            "Вот тебе немного денег на начало. Удачи! Я вернусь через год проверить, как ты справляешься.",
+            "Ой, кажется, пришел первый гость! Нажми на него, чтобы заселить в свободную комнату."
+        ];
+        
+        // Улучшения
+        const upgrades = {
+            floor: {
+                name: "Добавить этаж",
+                cost: 500,
+                desc: "+3 комнаты для гостей",
+                max: MAX_FLOORS,
+                owned: () => gameState.floors,
+                effect: () => {
+                    if (gameState.money >= upgrades.floor.cost && gameState.floors < upgrades.floor.max) {
+                        gameState.money -= upgrades.floor.cost;
+                        gameState.floors++;
+                        updateRoomDisplays();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.floor.cost = 500 * Math.pow(1.5, gameState.floors - 1);
+                }
+            },
+            lobby: {
+                name: "Улучшить лобби",
+                cost: 300,
+                desc: "+10% к репутации",
+                max: 3,
+                owned: () => gameState.lobbyLevel,
+                effect: () => {
+                    if (gameState.money >= upgrades.lobby.cost && gameState.lobbyLevel < upgrades.lobby.max) {
+                        gameState.money -= upgrades.lobby.cost;
+                        gameState.lobbyLevel++;
+                        gameState.reputation = Math.min(100, gameState.reputation + 10);
+                        upgrades.lobby.updateCost();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.lobby.cost = 300 * Math.pow(2, gameState.lobbyLevel - 1);
+                }
+            },
+            bed: {
+                name: "Кровать",
+                cost: 100,
+                desc: "+5% к довольству гостей",
+                max: 3,
+                owned: () => gameState.roomUpgrades.bed,
+                effect: () => {
+                    if (gameState.money >= upgrades.bed.cost && gameState.roomUpgrades.bed < upgrades.bed.max) {
+                        gameState.money -= upgrades.bed.cost;
+                        gameState.roomUpgrades.bed++;
+                        upgrades.bed.updateCost();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.bed.cost = 100 * Math.pow(1.8, gameState.roomUpgrades.bed - 1);
+                }
+            },
+            toy: {
+                name: "Игрушки",
+                cost: 80,
+                desc: "+3% к довольству гостей",
+                max: 3,
+                owned: () => gameState.roomUpgrades.toy,
+                effect: () => {
+                    if (gameState.money >= upgrades.toy.cost && gameState.roomUpgrades.toy < upgrades.toy.max) {
+                        gameState.money -= upgrades.toy.cost;
+                        gameState.roomUpgrades.toy++;
+                        upgrades.toy.updateCost();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.toy.cost = 80 * Math.pow(1.7, gameState.roomUpgrades.toy - 1);
+                }
+            },
+            window: {
+                name: "Окно с видом",
+                cost: 150,
+                desc: "+7% к довольству гостей",
+                max: 3,
+                owned: () => gameState.roomUpgrades.window,
+                effect: () => {
+                    if (gameState.money >= upgrades.window.cost && gameState.roomUpgrades.window < upgrades.window.max) {
+                        gameState.money -= upgrades.window.cost;
+                        gameState.roomUpgrades.window++;
+                        upgrades.window.updateCost();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.window.cost = 150 * Math.pow(1.9, gameState.roomUpgrades.window - 1);
+                }
+            },
+            receptionist: {
+                name: "Ресепшионист",
+                cost: 200,
+                desc: "Автоматически заселяет гостей",
+                max: 1,
+                owned: () => gameState.staffCount.receptionist,
+                effect: () => {
+                    if (gameState.money >= upgrades.receptionist.cost && gameState.staffCount.receptionist < upgrades.receptionist.max) {
+                        gameState.money -= upgrades.receptionist.cost;
+                        gameState.staffCount.receptionist++;
+                        gameState.autoCheckIn = true;
+                        hireStaff('receptionist', 300, 150);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            cleaner: {
+                name: "Уборщик",
+                cost: 150,
+                desc: "+5% к репутации",
+                max: 3,
+                owned: () => gameState.staffCount.cleaner,
+                effect: () => {
+                    if (gameState.money >= upgrades.cleaner.cost && gameState.staffCount.cleaner < upgrades.cleaner.max) {
+                        gameState.money -= upgrades.cleaner.cost;
+                        gameState.staffCount.cleaner++;
+                        gameState.reputation = Math.min(100, gameState.reputation + 5);
+                        hireStaff('cleaner', 200 + Math.random() * 600, 100);
+                        upgrades.cleaner.updateCost();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.cleaner.cost = 150 * Math.pow(1.6, gameState.staffCount.cleaner);
+                }
+            },
+            chef: {
+                name: "Повар",
+                cost: 250,
+                desc: "+10% к довольству гостей",
+                max: 2,
+                owned: () => gameState.staffCount.chef,
+                effect: () => {
+                    if (gameState.money >= upgrades.chef.cost && gameState.staffCount.chef < upgrades.chef.max) {
+                        gameState.money -= upgrades.chef.cost;
+                        gameState.staffCount.chef++;
+                        hireStaff('chef', 400, 200);
+                        upgrades.chef.updateCost();
+                        return true;
+                    }
+                    return false;
+                },
+                updateCost: () => {
+                    upgrades.chef.cost = 250 * Math.pow(1.7, gameState.staffCount.chef);
+                }
+            }
+        };
+        
+        // Инициализация игры
+        function initGame() {
+            // Установка размеров canvas
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Загрузка изображений
+            loadImages();
+            
+            // Настройка элементов UI
+            setupUI();
+            
+            // Начало игры
+            startButton.addEventListener('click', startGame);
+            dialogNext.addEventListener('click', nextDialog);
+            notificationOk.addEventListener('click', () => {
+                notification.style.display = 'none';
+            });
+            
+            // Игровой цикл
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Изменение размера canvas
+        function resizeCanvas() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // Сохраняем соотношение 16:9
+            const targetRatio = 16 / 9;
+            const currentRatio = width / height;
+            
+            if (currentRatio > targetRatio) {
+                // Шире, чем нужно - регулируем по высоте
+                canvas.width = height * targetRatio;
+                canvas.height = height;
+            } else {
+                // Уже, чем нужно - регулируем по ширине
+                canvas.width = width;
+                canvas.height = width / targetRatio;
+            }
+            
+            canvas.style.width = canvas.width + 'px';
+            canvas.style.height = canvas.height + 'px';
+        }
+        
+        // Загрузка изображений
+        function loadImages() {
+            const imageNames = Object.keys(images);
+            let loaded = 0;
+            
+            imageNames.forEach(name => {
+                const img = new Image();
+                img.onload = () => {
+                    loaded++;
+                    images[name] = img;
+                    loadingBar.style.width = `${(loaded / imageNames.length) * 100}%`;
+                    
+                    if (loaded === imageNames.length) {
+                        setTimeout(() => {
+                            loadingScreen.style.display = 'none';
+                            titleScreen.style.display = 'flex';
+                        }, 500);
+                    }
+                };
+                
+                // Простые SVG в base64 для демонстрации
+                switch(name) {
+                    case 'cat1':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRkMxMDh9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRkE1MDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRkM2QTF9LnN0NXtmaWxsOiNGRkQwQjJ9LnN0NntmaWxsOiM1RjQwMzd9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNDAiIHI9IjIwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNDAiIGN5PSIzNSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjYwIiBjeT0iMzUiIHI9IjUiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNNDAgNjBjMCA1IDEwIDUgMTAgMHM1LTEwIDEwLTEwYzUtNSAxMC01IDEwIDAiLz48cGF0aCBjbGFzcz0ic3Q0IiBkPSJNMzUgNzBjNSA1IDE1IDUgMjAgMCIvPjxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik0zMCA4MGM1IDUgMTUgNSAyMCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iMzcuNSIgY3k9IjM3LjUiIHI9IjIuNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjYyLjUiIGN5PSIzNy41IiByPSIyLjUiLz48L3N2Zz4=';
+                        break;
+                    case 'cat2':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjdDODB9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRjlFNDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRjlFNDB9LnN0NXtmaWxsOiNGRjlFNDB9LnN0NntmaWxsOiM1RjQwMzd9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNDAiIHI9IjIwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNDAiIGN5PSIzNSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjYwIiBjeT0iMzUiIHI9IjUiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNNDAgNjBjMCA1IDEwIDUgMTAgMHM1LTEwIDEwLTEwYzUtNSAxMC01IDEwIDAiLz48cGF0aCBjbGFzcz0ic3Q0IiBkPSJNMzUgNzBjNSA1IDE1IDUgMjAgMCIvPjxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik0zMCA4MGM1IDUgMTUgNSAyMCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iMzcuNSIgY3k9IjM3LjUiIHI9IjIuNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjYyLjUiIGN5PSIzNy41IiByPSIyLjUiLz48ZWxsaXBzZSBjbGFzcz0ic3Q0IiBjeD0iNTAiIGN5PSI0NSIgcng9IjEwIiByeT0iNSIvPjwvc3ZnPg==';
+                        break;
+                    case 'cat3':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjdDODB9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRjlFNDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRjlFNDB9LnN0NXtmaWxsOiNGRjlFNDB9LnN0NntmaWxsOiM1RjQwMzd9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNDAiIHI9IjIwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNDAiIGN5PSIzNSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjYwIiBjeT0iMzUiIHI9IjUiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNNDAgNjBjMCA1IDEwIDUgMTAgMHM1LTEwIDEwLTEwYzUtNSAxMC01IDEwIDAiLz48cGF0aCBjbGFzcz0ic3Q0IiBkPSJNMzUgNzBjNSA1IDE1IDUgMjAgMCIvPjxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik0zMCA4MGM1IDUgMTUgNSAyMCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iMzcuNSIgY3k9IjM3LjUiIHI9IjIuNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjYyLjUiIGN5PSIzNy41IiByPSIyLjUiLz48ZWxsaXBzZSB0cmFuc2Zvcm09InJvdGF0ZSgtMzAgNTAsNDUpIiBjbGFzcz0ic3Q0IiBjeD0iNTAiIGN5PSI0NSIgcng9IjEwIiByeT0iNSIvPjwvc3ZnPg==';
+                        break;
+                    case 'receptionist':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjdDODB9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRjlFNDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRjlFNDB9LnN0NXtmaWxsOiNGRjlFNDB9LnN0NntmaWxsOiM1RjQwMzd9LnN0N3tmaWxsOiNGRkZGRkZ9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNDAiIHI9IjIwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNDAiIGN5PSIzNSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjYwIiBjeT0iMzUiIHI9IjUiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNNDAgNjBjMCA1IDEwIDUgMTAgMHM1LTEwIDEwLTEwYzUtNSAxMC01IDEwIDAiLz48cGF0aCBjbGFzcz0ic3Q0IiBkPSJNMzUgNzBjNSA1IDE1IDUgMjAgMCIvPjxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik0zMCA4MGM1IDUgMTUgNSAyMCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iMzcuNSIgY3k9IjM3LjUiIHI9IjIuNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjYyLjUiIGN5PSIzNy41IiByPSIyLjUiLz48cmVjdCBjbGFzcz0ic3Q3IiB4PSI0NSIgeT0iMjUiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxNSIvPjwvc3ZnPg==';
+                        break;
+                    case 'cleaner':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjdDODB9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRjlFNDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRjlFNDB9LnN0NXtmaWxsOiNGRjlFNDB9LnN0NntmaWxsOiM1RjQwMzd9LnN0N3tmaWxsOiNGRkZGRkZ9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNDAiIHI9IjIwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNDAiIGN5PSIzNSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjYwIiBjeT0iMzUiIHI9IjUiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNNDAgNjBjMCA1IDEwIDUgMTAgMHM1LTEwIDEwLTEwYzUtNSAxMC01IDEwIDAiLz48cGF0aCBjbGFzcz0ic3Q0IiBkPSJNMzUgNzBjNSA1IDE1IDUgMjAgMCIvPjxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik0zMCA4MGM1IDUgMTUgNSAyMCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iMzcuNSIgY3k9IjM3LjUiIHI9IjIuNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjYyLjUiIGN5PSIzNy41IiByPSIyLjUiLz48cGF0aCBjbGFzcz0ic3Q3IiBkPSJNNTUgMjVoLTEwdjE1aDEwdi01aDV2LTVoLTV6Ii8+PC9zdmc+';
+                        break;
+                    case 'chef':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjdDODB9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiNGRjlFNDB9LnN0M3tmaWxsOiNGRkUwQTF9LnN0NHtmaWxsOiNGRjlFNDB9LnN0NXtmaWxsOiNGRjlFNDB9LnN0NntmaWxsOiM1RjQwMzd9LnN0N3tmaWxsOiNGRkZGRkZ9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNDAiIHI9IjIwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNDAiIGN5PSIzNSIgcj0iNSIvPjxjaXJjbGUgY2xhc3M9InN0MiIgY3g9IjYwIiBjeT0iMzUiIHI9IjUiLz48cGF0aCBjbGFzcz0ic3QzIiBkPSJNNDAgNjBjMCA1IDEwIDUgMTAgMHM1LTEwIDEwLTEwYzUtNSAxMC01IDEwIDAiLz48cGF0aCBjbGFzcz0ic3Q0IiBkPSJNMzUgNzBjNSA1IDE1IDUgMjAgMCIvPjxwYXRoIGNsYXNzPSJzdDUiIGQ9Ik0zMCA4MGM1IDUgMTUgNSAyMCAwIi8+PGNpcmNsZSBjbGFzcz0ic3Q2IiBjeD0iMzcuNSIgY3k9IjM3LjUiIHI9IjIuNSIvPjxjaXJjbGUgY2xhc3M9InN0NiIgY3g9IjYyLjUiIGN5PSIzNy41IiByPSIyLjUiLz48cGF0aCBjbGFzcz0ic3Q3IiBkPSJNNDUgMjVoMTB2MTVoLTEwem0xMCAxMGg1djVoLTV6Ii8+PC9zdmc+';
+                        break;
+                    case 'bed1':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiM4RDZFNjN9LnN0MXtmaWxsOiM1RDQwMzd9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSIxMCIgeT0iNjAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzMCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjEwIiB5PSI1MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjEwIi8+PC9zdmc+';
+                        break;
+                    case 'bed2':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNCOEJBQTl9LnN0MXtmaWxsOiM4RDZFNjN9LnN0MntmaWxsOiM1RDQwMzd9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSIxMCIgeT0iNjAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzMCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjEwIiB5PSI1MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjEwIi8+PHJlY3QgY2xhc3M9InN0MiIgeD0iMjAiIHk9IjU1IiB3aWR0aD0iNjAiIGhlaWdodD0iNSIvPjwvc3ZnPg==';
+                        break;
+                    case 'bed3':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNCOEJBQTl9LnN0MXtmaWxsOiNGRkYyQkN9LnN0MntmaWxsOiM4RDZFNjN9LnN0M3tmaWxsOiM1RDQwMzd9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSIxMCIgeT0iNjAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIzMCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjEwIiB5PSI1MCIgd2lkdGg9IjgwIiBoZWlnaHQ9IjEwIi8+PHJlY3QgY2xhc3M9InN0MiIgeD0iMjAiIHk9IjU1IiB3aWR0aD0iNjAiIGhlaWdodD0iNSIvPjxwYXRoIGNsYXNzPSJzdDMiIGQ9Ik0yMCA1NWg2MHY1aC02MHoiLz48L3N2Zz4=';
+                        break;
+                    case 'toy1':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjlFNDB9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjY1IiByPSIxMCIvPjwvc3ZnPg==';
+                        break;
+                    case 'toy2':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjlFNDB9LnN0MXtmaWxsOiNGRkM2QTF9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjY1IiByPSIxMCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNjUiIHI9IjUiLz48L3N2Zz4=';
+                        break;
+                    case 'toy3':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNGRjlFNDB9LnN0MXtmaWxsOiNGRkM2QTF9PC9zdHlsZT48Y2lyY2xlIGNsYXNzPSJzdDAiIGN4PSI1MCIgY3k9IjY1IiByPSIxMCIvPjxjaXJjbGUgY2xhc3M9InN0MSIgY3g9IjUwIiBjeT0iNjUiIHI9IjUiLz48cGF0aCBkPSJNNTAgNTV2MjBNNDUgNjVoMTBNNTAgNjVjMC0yLjc3IDIuMjM4LTUgNS01IiBzdHJva2U9IiNGRkZGRkYiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==';
+                        break;
+                    case 'window1':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiM4N0NFRUJ9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSI2MCIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI0MCIvPjwvc3ZnPg==';
+                        break;
+                    case 'window2':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiM4N0NFRUJ9LnN0MXtmaWxsOiNGRkZGRkZ9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSI2MCIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI0MCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjYwIiB5PSIyMCIgd2lkdGg9IjMwIiBoZWlnaHQ9IjIwIi8+PC9zdmc+';
+                        break;
+                    case 'window3':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiM4N0NFRUJ9LnN0MXtmaWxsOiNGRkZGRkZ9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSI2MCIgeT0iMjAiIHdpZHRoPSIzMCIgaGVpZ2h0PSI0MCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjYwIiB5PSIyMCIgd2lkdGg9IjE1IiBoZWlnaHQ9IjIwIi8+PHJlY3QgY2xhc3M9InN0MSIgeD0iODAiIHk9IjQ1IiB3aWR0aD0iMTAiIGhlaWdodD0iMTUiLz48L3N2Zz4=';
+                        break;
+                    case 'lobby1':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNCOEJBQTl9LnN0MXtmaWxsOiM1RDQwMzd9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSIxMCIgeT0iODAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIxMCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjIwIiB5PSI3MCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjEwIi8+PC9zdmc+';
+                        break;
+                    case 'lobby2':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNCOEJBQTl9LnN0MXtmaWxsOiM1RDQwMzd9LnN0MntmaWxsOiNGRjlFNDB9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSIxMCIgeT0iODAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIxMCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjIwIiB5PSI3MCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjEwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNTAiIGN5PSI2NSIgcj0iNSIvPjwvc3ZnPg==';
+                        break;
+                    case 'lobby3':
+                        img.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48c3R5bGU+LnN0MHtmaWxsOiNCOEJBQTl9LnN0MXtmaWxsOiM1RDQwMzd9LnN0MntmaWxsOiNGRjlFNDB9LnN0M3tmaWxsOiNGRkYyQkN9PC9zdHlsZT48cmVjdCBjbGFzcz0ic3QwIiB4PSIxMCIgeT0iODAiIHdpZHRoPSI4MCIgaGVpZ2h0PSIxMCIvPjxyZWN0IGNsYXNzPSJzdDEiIHg9IjIwIiB5PSI3MCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjEwIi8+PGNpcmNsZSBjbGFzcz0ic3QyIiBjeD0iNTAiIGN5PSI2NSIgcj0iNSIvPjxyZWN0IGNsYXNzPSJzdDMiIHg9IjQwIiB5PSI1MCIgd2lkdGg9IjIwIiBoZWlnaHQ9IjEwIi8+PC9zdmc+';
+                        break;
+                    default:
+                        img.src = '';
+                }
+            });
+        }
+        
+        // Настройка UI
+        function setupUI() {
+            // Обновляем стоимость улучшений
+            Object.keys(upgrades).forEach(key => {
+                if (upgrades[key].updateCost) {
+                    upgrades[key].updateCost();
+                }
+            });
+            
+            // Обновляем отображение улучшений
+            updateUpgradeDisplays();
+        }
+        
+        // Начало игры
+        function startGame() {
+            titleScreen.style.display = 'none';
+            startDialog();
+        }
+        
+        // Диалоги
+        function startDialog() {
+            gameState.storyProgress = 0;
+            dialog.style.display = 'block';
+            nextDialog();
+        }
+        
+        function nextDialog() {
+            if (gameState.storyProgress < dialogs.length) {
+                dialogText.textContent = dialogs[gameState.storyProgress];
+                gameState.storyProgress++;
+                
+                if (gameState.storyProgress === dialogs.length) {
+                    dialogNext.textContent = "Начать!";
+                }
+            } else {
+                dialog.style.display = 'none';
+                gameState.tutorialCompleted = true;
+                
+                // Создаем первого гостя для обучения
+                if (gameState.guests.length === 0) {
+                    spawnGuest();
+                }
+            }
+        }
+        
+        // Уведомления
+        function showNotification(text) {
+            notificationText.textContent = text;
+            notification.style.display = 'block';
+        }
+        
+        // Обновление отображения улучшений
+        function updateUpgradeDisplays() {
+            document.getElementById('floor-owned').textContent = `Этажей: ${gameState.floors}/${MAX_FLOORS}`;
+            document.getElementById('lobby-owned').textContent = `Уровень: ${gameState.lobbyLevel}/3`;
+            document.getElementById('bed-owned').textContent = `Уровень: ${gameState.roomUpgrades.bed}/3`;
+            document.getElementById('toy-owned').textContent = `Уровень: ${gameState.roomUpgrades.toy}/3`;
+            document.getElementById('window-owned').textContent = `Уровень: ${gameState.roomUpgrades.window}/3`;
+            document.getElementById('receptionist-owned').textContent = `${gameState.staffCount.receptionist}/1`;
+            document.getElementById('cleaner-owned').textContent = `${gameState.staffCount.cleaner}/3`;
+            document.getElementById('chef-owned').textContent = `${gameState.staffCount.chef}/2`;
+            
+            // Обновляем стоимость в UI
+            Object.keys(upgrades).forEach(key => {
+                const upgrade = upgrades[key];
+                const elements = document.querySelectorAll(`.upgrade-item[onclick="buyUpgrade('${key}')"] .upgrade-cost`);
+                
+                elements.forEach(el => {
+                    el.textContent = `Стоимость: ₽${Math.floor(upgrade.cost)}`;
+                });
+            });
+        }
+        
+        // Обновление отображения комнат
+        function updateRoomDisplays() {
+            // В реальной игре здесь бы обновлялись DOM элементы комнат
+        }
+        
+        // Покупка улучшения
+        function buyUpgrade(type) {
+            if (upgrades[type].effect()) {
+                updateUpgradeDisplays();
+                showNotification(`Улучшение "${upgrades[type].name}" приобретено!`);
+            } else {
+                showNotification("Недостаточно денег или максимальный уровень достигнут!");
+            }
+        }
+        
+        // Наем персонала
+        function hireStaff(type, x, y) {
+            gameState.staff.push({
+                type: type,
+                x: x,
+                y: y,
+                targetX: x,
+                targetY: y,
+                progress: 0,
+                speed: 1 + Math.random() * 2
+            });
+        }
+        
+        // Создание гостя
+        function spawnGuest() {
+            const catTypes = ['cat1', 'cat2', 'cat3'];
+            const type = catTypes[Math.floor(Math.random() * catTypes.length)];
+            
+            gameState.guests.push({
+                type: type,
+                x: 50,
+                y: 150,
+                targetX: 50,
+                targetY: 150,
+                room: -1, // -1 означает, что гость не заселен
+                happiness: 70 + Math.floor(Math.random() * 30),
+                payment: 50 + Math.floor(Math.random() * 50),
+                progress: 0,
+                speed: 0.5 + Math.random() * 1.5
+            });
+            
+            gameState.lastGuestTime = gameState.gameTime;
+        }
+        
+        // Заселение гостя
+        function checkInGuest(guestIndex, roomIndex) {
+            const guest = gameState.guests[guestIndex];
+            guest.room = roomIndex;
+            
+            // Определяем позицию комнаты
+            const floor = Math.floor(roomIndex / ROOMS_PER_FLOOR);
+            const roomInFloor = roomIndex % ROOMS_PER_FLOOR;
+            
+            guest.targetX = 150 + roomInFloor * 100;
+            guest.targetY = canvas.height - (floor * FLOOR_HEIGHT + 50);
+            
+            // Увеличиваем счастье в зависимости от улучшений
+            let happinessBonus = 0;
+            happinessBonus += (gameState.roomUpgrades.bed - 1) * 5;
+            happinessBonus += (gameState.roomUpgrades.toy - 1) * 3;
+            happinessBonus += (gameState.roomUpgrades.window - 1) * 7;
+            happinessBonus += gameState.staffCount.chef * 10;
+            
+            guest.happiness = Math.min(100, guest.happiness + happinessBonus);
+            
+            // Увеличиваем плату в зависимости от счастья
+            guest.payment = Math.floor(guest.payment * (1 + guest.happiness / 100));
+        }
+        
+        // Выселение гостя
+        function checkOutGuest(guestIndex) {
+            const guest = gameState.guests[guestIndex];
+            
+            // Получаем оплату
+            gameState.money += guest.payment;
+            
+            // Увеличиваем репутацию в зависимости от счастья
+            const reputationGain = Math.floor(guest.happiness / 10);
+            gameState.reputation = Math.min(100, gameState.reputation + reputationGain);
+            
+            // Удаляем гостя
+            gameState.guests.splice(guestIndex, 1);
+        }
+        
+        // Обработка кликов
+        function handleClick(x, y) {
+            // Проверяем, не кликнули ли на гостя
+            for (let i = 0; i < gameState.guests.length; i++) {
+                const guest = gameState.guests[i];
+                if (guest.room === -1 && Math.abs(guest.x - x) < 30 && Math.abs(guest.y - y) < 30) {
+                    // Ищем свободную комнату
+                    for (let j = 0; j < gameState.floors * ROOMS_PER_FLOOR; j++) {
+                        let roomOccupied = false;
+                        for (const g of gameState.guests) {
+                            if (g.room === j) {
+                                roomOccupied = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!roomOccupied) {
+                            checkInGuest(i, j);
+                            return;
+                        }
+                    }
+                    
+                    showNotification("Нет свободных комнат! Постройте новый этаж.");
+                    return;
+                }
+            }
+            
+            // Проверяем, не кликнули ли на персонал
+            for (const staff of gameState.staff) {
+                if (Math.abs(staff.x - x) < 20 && Math.abs(staff.y - y) < 30) {
+                    showNotification(`Это наш ${getStaffName(staff.type)}. Он усердно работает!`);
+                    return;
+                }
+            }
+        }
+        
+        // Получение имени персонала
+        function getStaffName(type) {
+            switch(type) {
+                case 'receptionist': return 'ресепшионист';
+                case 'cleaner': return 'уборщик';
+                case 'chef': return 'повар';
+                default: return 'персонал';
+            }
+        }
+        
+        // Автоматическое заселение
+        function autoCheckIn() {
+            if (!gameState.autoCheckIn || gameState.guests.length === 0) return;
+            
+            for (let i = 0; i < gameState.guests.length; i++) {
+                const guest = gameState.guests[i];
+                if (guest.room === -1) {
+                    // Ищем свободную комнату
+                    for (let j = 0; j < gameState.floors * ROOMS_PER_FLOOR; j++) {
+                        let roomOccupied = false;
+                        for (const g of gameState.guests) {
+                            if (g.room === j) {
+                                roomOccupied = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!roomOccupied) {
+                            checkInGuest(i, j);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Обновление персонала
+        function updateStaff(deltaTime) {
+            for (const staff of gameState.staff) {
+                // Просто двигаем персонал случайным образом
+                staff.progress += deltaTime * staff.speed * 0.001;
+                
+                if (staff.progress >= 1) {
+                    staff.progress = 0;
+                    staff.targetX = 100 + Math.random() * (canvas.width - 200);
+                    staff.targetY = 100 + Math.random() * (canvas.height - 200);
+                }
+                
+                staff.x = staff.x + (staff.targetX - staff.x) * 0.02;
+                staff.y = staff.y + (staff.targetY - staff.y) * 0.02;
+            }
+        }
+        
+        // Обновление гостей
+        function updateGuests(deltaTime) {
+            for (let i = 0; i < gameState.guests.length; i++) {
+                const guest = gameState.guests[i];
+                
+                // Двигаем гостя к цели
+                guest.x = guest.x + (guest.targetX - guest.x) * 0.02;
+                guest.y = guest.y + (guest.targetY - guest.y) * 0.02;
+                
+                // Если гость в номере, уменьшаем его счастье со временем
+                if (guest.room !== -1) {
+                    guest.happiness -= deltaTime * 0.0005;
+                    
+                    // Если счастье слишком низкое, гость уходит
+                    if (guest.happiness <= 0) {
+                        checkOutGuest(i);
+                        i--; // Учитываем удаление элемента из массива
+                    }
+                }
+            }
+        }
+        
+        // Генерация новых гостей
+        function spawnNewGuests(deltaTime) {
+            gameState.gameTime += deltaTime;
+            
+            // Уменьшаем интервал между гостями в зависимости от репутации
+            const reputationFactor = 1 - (gameState.reputation / 200);
+            const currentGuestInterval = gameState.guestInterval * reputationFactor;
+            
+            if (gameState.gameTime - gameState.lastGuestTime > currentGuestInterval) {
+                if (gameState.guests.length < gameState.floors * ROOMS_PER_FLOOR * 2) {
+                    spawnGuest();
+                }
+            }
+        }
+        
+        // Получение платежей
+        function processPayments(deltaTime) {
+            if (gameState.gameTime - gameState.lastPaymentTime > gameState.paymentInterval) {
+                for (const guest of gameState.guests) {
+                    if (guest.room !== -1) {
+                        // Гости платят каждые paymentInterval мс
+                        gameState.money += Math.floor(guest.payment * 0.1 * (guest.happiness / 100));
+                    }
+                }
+                
+                gameState.lastPaymentTime = gameState.gameTime;
+            }
+        }
+        
+        // Обновление UI
+        function updateUI() {
+            moneyDisplay.textContent = `₽${Math.floor(gameState.money)}`;
+            reputationDisplay.textContent = `Репутация: ${Math.floor(gameState.reputation)}%`;
+            
+            const occupiedRooms = gameState.guests.filter(g => g.room !== -1).length;
+            const totalRooms = gameState.floors * ROOMS_PER_FLOOR;
+            guestsDisplay.textContent = `Гости: ${occupiedRooms}/${totalRooms}`;
+        }
+        
+        // Отрисовка игры
+        function render() {
+            // Очищаем canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем фон
+            drawBackground();
+            
+            // Рисуем отель
+            drawHotel();
+            
+            // Рисуем персонал
+            drawStaff();
+            
+            // Рисуем гостей
+            drawGuests();
+            
+            // Рисуем UI поверх всего
+            drawUI();
+        }
+        
+        // Отрисовка фона
+        function drawBackground() {
+            // Градиентное небо
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            skyGradient.addColorStop(0, '#87CEEB');
+            skyGradient.addColorStop(1, '#E0F7FA');
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Солнце
+            ctx.beginPath();
+            ctx.arc(canvas.width - 100, 100, 40, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFEB3B';
+            ctx.fill();
+            
+            // Облака
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            for (let i = 0; i < 3; i++) {
+                const x = (gameState.gameTime * 0.02 + i * 200) % (canvas.width + 200) - 100;
+                const y = 50 + i * 80;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 25, y - 10, 25, 0, Math.PI * 2);
+                ctx.arc(x + 50, y, 20, 0, Math.PI * 2);
+                ctx.arc(x + 25, y + 10, 15, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Земля
+            ctx.fillStyle = '#8BC34A';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+        }
+        
+        // Отрисовка отеля
+        function drawHotel() {
+            // Основа отеля
+            ctx.fillStyle = '#A1887F';
+            ctx.fillRect(100, 100, canvas.width - 200, canvas.height - 150);
+            
+            // Этажи
+            for (let i = 0; i < gameState.floors; i++) {
+                const floorY = canvas.height - (i * FLOOR_HEIGHT + 100);
+                
+                // Пол этажа
+                ctx.fillStyle = '#5D4037';
+                ctx.fillRect(100, floorY, canvas.width - 200, 5);
+                
+                // Комнаты на этаже
+                for (let j = 0; j < ROOMS_PER_FLOOR; j++) {
+                    const roomX = 150 + j * 100;
+                    
+                    // Проверяем, занята ли комната
+                    let occupied = false;
+                    for (const guest of gameState.guests) {
+                        if (guest.room === i * ROOMS_PER_FLOOR + j) {
+                            occupied = true;
+                            break;
+                        }
+                    }
+                    
+                    // Рисуем комнату
+                    ctx.fillStyle = occupied ? '#8D6E63' : '#BCAAA4';
+                    ctx.fillRect(roomX, floorY - ROOM_HEIGHT, ROOM_WIDTH, ROOM_HEIGHT);
+                    ctx.strokeStyle = '#5D4037';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(roomX, floorY - ROOM_HEIGHT, ROOM_WIDTH, ROOM_HEIGHT);
+                    
+                    // Рисуем улучшения комнаты
+                    if (gameState.roomUpgrades.bed > 1) {
+                        ctx.drawImage(images[`bed${gameState.roomUpgrades.bed}`], roomX + 10, floorY - 40, 60, 30);
+                    }
+                    
+                    if (gameState.roomUpgrades.toy > 1) {
+                        ctx.drawImage(images[`toy${gameState.roomUpgrades.toy}`], roomX + 40, floorY - 20, 20, 20);
+                    }
+                    
+                    if (gameState.roomUpgrades.window > 1) {
+                        ctx.drawImage(images[`window${gameState.roomUpgrades.window}`], roomX + 60, floorY - 80, 30, 40);
+                    }
+                }
+            }
+            
+            // Лобби
+            ctx.fillStyle = '#BCAAA4';
+            ctx.fillRect(150, canvas.height - 100, canvas.width - 300, 50);
+            
+            if (gameState.lobbyLevel > 1) {
+                ctx.drawImage(images[`lobby${gameState.lobbyLevel}`], 200, canvas.height - 120, canvas.width - 400, 70);
+            }
+        }
+        
+        // Отрисовка персонала
+        function drawStaff() {
+            for (const staff of gameState.staff) {
+                ctx.drawImage(images[staff.type], staff.x - 15, staff.y - 30, 30, 50);
+                
+                // Индикатор работы
+                ctx.fillStyle = '#E0E0E0';
+                ctx.fillRect(staff.x - 15, staff.y - 40, 30, 5);
+                ctx.fillStyle = '#4CAF50';
+                ctx.fillRect(staff.x - 15, staff.y - 40, 30 * staff.progress, 5);
+            }
+        }
+        
+        // Отрисовка гостей
+        function drawGuests() {
+            for (const guest of gameState.guests) {
+                ctx.drawImage(images[guest.type], guest.x - 20, guest.y - 30, 40, 40);
+                
+                // Индикатор счастья
+                ctx.fillStyle = '#E0E0E0';
+                ctx.fillRect(guest.x - 20, guest.y - 40, 40, 5);
+                ctx.fillStyle = guest.happiness > 50 ? '#4CAF50' : '#F44336';
+                ctx.fillRect(guest.x - 20, guest.y - 40, 40 * (guest.happiness / 100), 5);
+                
+                // Если гость не заселен, рисуем значок "!"
+                if (guest.room === -1) {
+                    ctx.fillStyle = '#F44336';
+                    ctx.beginPath();
+                    ctx.arc(guest.x + 10, guest.y - 20, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillText("!", guest.x + 8, guest.y - 16);
+                }
+            }
+        }
+        
+        // Отрисовка UI
+        function drawUI() {
+            // Здесь UI рисуется через DOM, поэтому в canvas ничего не рисуем
+        }
+        
+        // Игровой цикл
+        function gameLoop(timestamp) {
+            if (!gameState.lastTimestamp) {
+                gameState.lastTimestamp = timestamp;
+            }
+            
+            const deltaTime = timestamp - gameState.lastTimestamp;
+            gameState.lastTimestamp = timestamp;
+            
+            // Обновление игрового состояния
+            if (gameState.tutorialCompleted) {
+                updateStaff(deltaTime);
+                updateGuests(deltaTime);
+                spawnNewGuests(deltaTime);
+                processPayments(deltaTime);
+                autoCheckIn();
+                updateUI();
+            }
+            
+            // Отрисовка
+            render();
+            
+            // Следующий кадр
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Обработчики событий
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Масштабируем координаты относительно размера canvas
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            handleClick(x * scaleX, y * scaleY);
+        });
+        
+        // Запуск игры
+        initGame();
+    </script>
+</body>
+</html>
